@@ -1,0 +1,20 @@
+{
+    "api.example.com": {
+        "/v1/auth": {
+            "backend": "example-auth-v1",
+            "comment": "token endpoint",
+            "plugins": [
+                "rate-limit"
+            ]
+        },
+        "/v1/foo": {
+            "backend": "example-foo-v1",
+            "comment": "foo bar endpoint"
+        },
+        "/v1/ping": {
+            "backend": "example-foo-v1",
+            "comment": "ping pong endpoint"
+        }
+    },
+    "*": "docs.example.com"
+}
