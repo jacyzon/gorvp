@@ -2,11 +2,7 @@
     "foo": [
         "/v1/foo"
     ],
-    "bar": [
-        "/v1/bar"
-    ],
-    "all": [
-        "/v1/foo",
-        "/v1/bar"
+    "ping": [
+        "/v1/ping"
     ]
 }

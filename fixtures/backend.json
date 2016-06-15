@@ -7,13 +7,23 @@
                 "rate-limit"
             ]
         },
+        "/v1/pub": {
+            "backend": "example-foo-v1",
+            "comment": "public endpoint"
+        },
         "/v1/foo": {
             "backend": "example-foo-v1",
-            "comment": "foo bar endpoint"
+            "comment": "foo bar endpoint",
+            "plugins": [
+                "auth"
+            ]
         },
         "/v1/ping": {
             "backend": "example-foo-v1",
-            "comment": "ping pong endpoint"
+            "comment": "ping pong endpoint",
+            "plugins": [
+                "auth"
+            ]
         }
     },
     "*": "docs.example.com"
