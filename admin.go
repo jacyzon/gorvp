@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
+	"fmt"
 )
 
 type AdminHandler struct {
@@ -26,12 +27,14 @@ type Route struct {
 type CreateClientRequest struct {
 	Name    string `json:"name"`
 	AppType string `json:"app_type"`
-	OAuthGrant
-	AndroidGrant
+	Scope  []Scope `json:"scope"`
+	OAuthData
+	AndroidData
 }
 
 type CreateClientResponse struct {
-	Secret string
+	Id     uint   `json:"id"` // TODO switch to uuid
+	Secret string `json:"secret"`
 }
 
 type Routes []Route
@@ -46,18 +49,18 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest);
 	}
-	// TODO remove into helper
-	// TODO check data validation
+	// TODO appType to grantTypes and ResponseTypes helper
+	// TODO data validation
 
-	// ================================================================
-	// | AppType  | GrantTypes         | ResponseTypes | Data Type    |
-	// ----------------------------------------------------------------
-	// | web      | authorization_code | code, token   | OAuthGrant   |
-	// | web_app  | implicit           | token         | OAuthGrant   |
-	// | android  | android            | token         | AndroidGrant |
-	// | ios      | ios                | token         | IOSGrant     |
-	// | trusted  | password           | token         |              |
-	// ================================================================
+	// ===================================================================
+	// | AppType     | GrantTypes         | ResponseTypes | Data Type    |
+	// -------------------------------------------------------------------
+	// | web_backend | authorization_code | code, token   | OAuthGrant   |
+	// | web_app     | implicit           | token         | OAuthGrant   |
+	// | android     | implicit           | token         | AndroidGrant |
+	// | ios         | implicit           | token         | IOSGrant     |
+	// | trusted     | password           | token         |              |
+	// ===================================================================
 	client := Client{
 		Name: createClientRequest.Name,
 		Grant: Grant{
@@ -65,46 +68,47 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	switch createClientRequest.AppType {
-	case "web":
-		client.Grant.Data = OAuthGrant{
+	case "web_backend":
+		client.Grant.Data = OAuthData{
 			RedirectURI: createClientRequest.RedirectURI,
-			GrantForFosite: GrantForFosite{
-				GrantTypes: []string{"authorization_code"},
-				ResponseTypes: []string{"code", "token"},
-			},
 		}
+		client.Grant.GrantTypes = []string{"authorization_code"}
+		client.Grant.ResponseTypes = []string{"code", "token"}
 		break
 	case "web_app":
-		client.Grant.Data = OAuthGrant{
+		client.Grant.Data = OAuthData{
 			RedirectURI: createClientRequest.RedirectURI,
-			GrantForFosite: GrantForFosite{
-				GrantTypes: []string{"implicit"},
-				ResponseTypes: []string{"token"},
-			},
 		}
+		client.Grant.GrantTypes = []string{"implicit"}
+		client.Grant.ResponseTypes = []string{"token"}
 		break
 	case "android":
-		client.Grant.Data = OAuthGrant{
-			RedirectURI: createClientRequest.RedirectURI,
-			GrantForFosite: GrantForFosite{
-				GrantTypes: []string{"android"},
-				ResponseTypes: []string{"token"},
-			},
+		client.Grant.Data = AndroidData{
+			StartActivity: createClientRequest.StartActivity,
+			PackageName: createClientRequest.PackageName,
+			KeyHash: createClientRequest.KeyHash,
 		}
+		client.Grant.GrantTypes = []string{"implicit"}
+		client.Grant.ResponseTypes = []string{"token"}
 		break
 	case "ios":
 		// not implemented yet
 		break
 	case "trusted":
-		client.Grant.Data = OAuthGrant{
+		client.Grant.Data = OAuthData{
 			RedirectURI: createClientRequest.RedirectURI,
-			GrantForFosite: GrantForFosite{
-				GrantTypes: []string{"password"},
-				ResponseTypes: []string{"token"},
-			},
 		}
+		client.Grant.GrantTypes = []string{"password"}
+		client.Grant.ResponseTypes = []string{"token"}
 		break
 	}
+	fmt.Println(createClientRequest.Scope)
+	scopeJson, _ := json.Marshal(createClientRequest.Scope)
+	client.ScopeJSON = string(scopeJson)
+	fmt.Println(client.ScopeJSON)
+
+	grantJson, _ := json.Marshal(&client.Grant)
+	client.GrantJSON = string(grantJson)
 
 	// generate client secret
 	unEncryptedSecret, _ := h.Hash.Generate(h.Hash.Size)
@@ -113,12 +117,13 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	client.Secret = secretString
 
 	// save new client into database
-	grantJson, _ := json.Marshal(&client.Grant)
-	client.GrantJSON = string(grantJson)
 	h.DB.Create(&client)
 
 	// create response
-	createClientResponse := CreateClientResponse{Secret: unEncryptedSecret}
+	createClientResponse := CreateClientResponse{
+		Id:     client.ID,
+		Secret: unEncryptedSecret,
+	}
 	w.Header().Set("Content-Type", "application/javascript")
 	json.NewEncoder(w).Encode(createClientResponse)
 }
