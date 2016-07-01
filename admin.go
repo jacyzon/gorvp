@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
-	"fmt"
 )
 
 type AdminHandler struct {
@@ -27,13 +26,13 @@ type Route struct {
 type CreateClientRequest struct {
 	Name    string `json:"name"`
 	AppType string `json:"app_type"`
-	Scope  []Scope `json:"scope"`
+	Scope   []Scope `json:"scope"`
 	OAuthData
 	AndroidData
 }
 
 type CreateClientResponse struct {
-	Id     uint   `json:"id"` // TODO switch to uuid
+	Id     uint `json:"id"` // TODO switch to uuid
 	Secret string `json:"secret"`
 }
 
@@ -63,52 +62,32 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	// ===================================================================
 	client := Client{
 		Name: createClientRequest.Name,
-		Grant: Grant{
-			AppType: createClientRequest.AppType,
-		},
+		AppType: createClientRequest.AppType,
 	}
 	switch createClientRequest.AppType {
 	case "web_backend":
-		client.Grant.Data = OAuthData{
-			RedirectURI: createClientRequest.RedirectURI,
-		}
-		client.Grant.GrantTypes = []string{"authorization_code"}
-		client.Grant.ResponseTypes = []string{"code", "token"}
+		client.RedirectURI = createClientRequest.RedirectURI
 		break
 	case "web_app":
-		client.Grant.Data = OAuthData{
-			RedirectURI: createClientRequest.RedirectURI,
-		}
-		client.Grant.GrantTypes = []string{"implicit"}
-		client.Grant.ResponseTypes = []string{"token"}
+		client.RedirectURI = createClientRequest.RedirectURI
 		break
 	case "android":
-		client.Grant.Data = AndroidData{
-			StartActivity: createClientRequest.StartActivity,
-			PackageName: createClientRequest.PackageName,
-			KeyHash: createClientRequest.KeyHash,
-		}
-		client.Grant.GrantTypes = []string{"implicit"}
-		client.Grant.ResponseTypes = []string{"token"}
+		client.StartActivity = createClientRequest.StartActivity
+		client.PackageName = createClientRequest.PackageName
+		client.KeyHash = createClientRequest.KeyHash
 		break
 	case "ios":
 		// not implemented yet
 		break
 	case "trusted":
-		client.Grant.Data = OAuthData{
-			RedirectURI: createClientRequest.RedirectURI,
-		}
-		client.Grant.GrantTypes = []string{"password"}
-		client.Grant.ResponseTypes = []string{"token"}
+		client.RedirectURI = createClientRequest.RedirectURI
 		break
 	}
-	fmt.Println(createClientRequest.Scope)
 	scopeJson, _ := json.Marshal(createClientRequest.Scope)
-	client.ScopeJSON = string(scopeJson)
-	fmt.Println(client.ScopeJSON)
+	client.ScopesJSON = string(scopeJson)
 
-	grantJson, _ := json.Marshal(&client.Grant)
-	client.GrantJSON = string(grantJson)
+	//grantJson, _ := json.Marshal(&client.Grant)
+	//client.GrantJSON = string(grantJson)
 
 	// generate client secret
 	unEncryptedSecret, _ := h.Hash.Generate(h.Hash.Size)
