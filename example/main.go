@@ -23,7 +23,8 @@ import (
 	"crypto/rsa"
 	"crypto/rand"
 	"log"
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
+	"github.com/ory-am/fosite/hash"
 )
 
 func MustRSAKey() *rsa.PrivateKey {
@@ -40,12 +41,23 @@ var jwtStrategy = &strategy.RS256JWTStrategy{
 	},
 }
 
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
+
 var selectedStrategy = jwtStrategy
 
 // fositeFactory creates a new Fosite instance with all features enabled
 func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
 	// Instantiate a new fosite instance
-	f := fosite.NewFosite(store)
+	f := &fosite.Fosite{
+		Store:                       store,
+		MandatoryScope:              "gorvp", // TODO - move mandatory scope into config
+		AuthorizeEndpointHandlers:   fosite.AuthorizeEndpointHandlers{},
+		TokenEndpointHandlers:       fosite.TokenEndpointHandlers{},
+		AuthorizedRequestValidators: fosite.AuthorizedRequestValidators{},
+		Hasher: &hash.BCrypt{WorkFactor: 12},
+	}
 
 	// Set the default access token lifespan to one hour
 	accessTokenLifespan := time.Hour
@@ -110,7 +122,7 @@ func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
 
 	// Add a request validator for Access Tokens to fosite
 	f.AuthorizedRequestValidators.Append(&core.CoreValidator{
-		AccessTokenStrategy: jwtStrategy,
+		AccessTokenStrategy: selectedStrategy,
 		AccessTokenStorage:  store,
 	})
 
@@ -192,6 +204,7 @@ func main() {
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// validate token
+	// TODO bearer token
 	_, token, ok := req.BasicAuth()
 	if !ok {
 		http.Error(rw, "missing authorization header", http.StatusBadRequest)
@@ -206,6 +219,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// check if the token is from trusted client
 	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+	// TODO check app type
 	if !trustedClient[jwtClaims.Audience] {
 		http.Error(rw, "client is not trusted", http.StatusForbidden)
 		return
@@ -232,12 +246,26 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// It will analyze the request and extract important information like scopes, response type and others.
 	ar, err := oauth2.NewAuthorizeRequest(ctx, req)
 	if err != nil {
-		log.Printf("Error occurred in NewAuthorizeRequest: %s\nStack: \n%s", err, err.(*errors.Error).ErrorStack())
+		log.Printf("Error occurred in NewAuthorizeRequest: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
 		oauth2.WriteAuthorizeError(rw, ar, err)
 		return
 	}
+	// check scopes
+	clientScopes := ar.GetClient().GetGrantedScopes()
+	for _, requestScope := range ar.GetScopes() {
+		if requestScope == oauth2.GetMandatoryScope() {
+			// every client has permission on mandatory scope by default
+			continue
+		}
+		if clientScopes.Grant(requestScope) {
+			ar.GrantScope(requestScope)
+		} else {
+			http.Error(rw, "client has no permission on requested scopes", http.StatusForbidden)
+			return
+		}
+	}
+
 	// Now that the user is authorized, we set up a session:
-	// TODO check all scopes is satisfied with required permissions
 	mySessionData := gorvp.NewSession(jwtClaims.Subject, ar.GetScopes())
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
@@ -250,7 +278,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// * invalid redirect
 	// * ...
 	if err != nil {
-		log.Printf("Error occurred in NewAuthorizeResponse: %s\nStack: \n%s", err, err.(*errors.Error).ErrorStack())
+		log.Printf("Error occurred in NewAuthorizeResponse: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
 		oauth2.WriteAuthorizeError(rw, ar, err)
 		return
 	}
@@ -274,7 +302,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// * invalid redirect
 	// * ...
 	if err != nil {
-		log.Printf("Error occurred in NewAccessRequest: %s\nStack: \n%s", err, err.(*errors.Error).ErrorStack())
+		log.Printf("Error occurred in NewAccessRequest: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
 		oauth2.WriteAccessError(rw, accessRequest, err)
 		return
 	}
@@ -283,7 +311,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// and aggregate the result in response.
 	response, err := oauth2.NewAccessResponse(ctx, req, accessRequest)
 	if err != nil {
-		log.Printf("Error occurred in NewAccessResponse: %s\nStack: \n%s", err, err.(*errors.Error).ErrorStack())
+		log.Printf("Error occurred in NewAccessResponse: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
 		oauth2.WriteAccessError(rw, accessRequest, err)
 		return
 	}
@@ -294,6 +322,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// The client now has a valid access token
 }
 
+// TODO remove
 var trustedClient = map[string]bool{
 	"trusted_audience": true,
 }

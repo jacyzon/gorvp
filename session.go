@@ -19,7 +19,7 @@ func NewSession(user string, scopes []string) *Session {
 			JWTClaims: &jwt.JWTClaims{
 				Issuer:    "https://api.gorvp.dev",
 				Subject:   user,
-				Audience:  "trusted_audience",
+				Audience:  "trusted_audience",	// TODO client id
 				ExpiresAt: time.Now().Add(time.Hour * 6),
 				IssuedAt:  time.Now(),
 				Extra: map[string]interface{}{

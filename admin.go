@@ -26,7 +26,7 @@ type Route struct {
 type CreateClientRequest struct {
 	Name    string `json:"name"`
 	AppType string `json:"app_type"`
-	Scope   []Scope `json:"scope"`
+	Scope   Scopes `json:"scope"`
 	OAuthData
 	AndroidData
 }

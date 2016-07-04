@@ -37,6 +37,7 @@ type Token struct {
 	Signature    string `gorm:"index"`
 	DataJSON     string `gorm:"size:4095"`
 
+	UserID       string `gorm:"index"`
 	ClientID     string `gorm:"index"`
 	Revoke       bool
 	RefreshToken bool
@@ -63,9 +64,7 @@ type Scope struct {
 	Required bool `json:"required"`
 }
 
-type Scopes struct {
-	Scopes []Scope
-}
+type Scopes []Scope
 
 func (db *DB) Migrate() {
 	db.DB.AutoMigrate(&Client{})
@@ -131,6 +130,7 @@ func (db *DB) CreateTokenSession(_ context.Context, signature string, req fosite
 		Signature: signature,
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
+		UserID: req.GetRequestForm().Get("username"), // TODO or token subject
 		Revoke: false,
 		RefreshToken: refreshToken,
 	}).Error
@@ -292,8 +292,7 @@ func (c *Client) GetGrantedScopes() fosite.Scopes {
 
 func (s *Scopes) Grant(requestScope string) bool {
 	// TODO refactoring
-	//return true
-	for _, scope := range s.Scopes {
+	for _, scope := range *s {
 		// foo == foo -> true
 		if scope.Name == requestScope {
 			return true
