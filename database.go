@@ -14,7 +14,7 @@ type DB struct {
 	DB *gorm.DB
 }
 
-type Client struct {
+type GoRvpClient struct {
 	gorm.Model
 	Name       string
 	Secret     string
@@ -24,6 +24,20 @@ type Client struct {
 	OAuthData
 	AndroidData
 }
+
+type Client interface {
+	fosite.Client
+	GetAppType() string
+	GetPackageName() string
+	GetKeyHash() string
+	GetStartActivity() string
+}
+
+const AppTypeAndroid = "android"
+const AppTypeIos = "ios"
+const AppTypeWebApp = "web_app"
+const AppTypeWebBackend = "web_backend"
+const AppTypeTrusted = "trusted"
 
 type AuthorizeCode struct {
 	gorm.Model
@@ -67,7 +81,7 @@ type Scope struct {
 type Scopes []Scope
 
 func (db *DB) Migrate() {
-	db.DB.AutoMigrate(&Client{})
+	db.DB.AutoMigrate(&GoRvpClient{})
 	db.DB.AutoMigrate(&AuthorizeCode{})
 	db.DB.AutoMigrate(&Token{})
 }
@@ -78,8 +92,8 @@ func (db *DB) GetClient(id string) (fosite.Client, error) {
 		return nil, fosite.ErrNotFound
 	}
 	intId, _ := strconv.Atoi(id)
-	client := &Client{}
-	err := db.DB.Where(&Client{
+	client := &GoRvpClient{}
+	err := db.DB.Where(&GoRvpClient{
 		Model: gorm.Model{
 			ID: uint(intId),
 		},
@@ -223,71 +237,98 @@ func (db *DB) PersistRefreshTokenGrantSession(ctx context.Context, originalRefre
 }
 
 // client interface
+
+func (c *GoRvpClient) TableName() string {
+	return "client"
+}
+
 // GetID returns the client ID.
-func (c *Client) GetID() string {
+func (c *GoRvpClient) GetID() string {
 	return string(c.ID);
 }
 
 // GetHashedSecret returns the hashed secret as it is stored in the store.
-func (c *Client) GetHashedSecret() []byte {
+func (c *GoRvpClient) GetHashedSecret() []byte {
 	return []byte(c.Secret)
 }
 
 // Returns the client's allowed redirect URIs.
-func (c *Client) GetRedirectURIs() []string {
+func (c *GoRvpClient) GetRedirectURIs() []string {
 	// TODO refactoring
-	if c.AppType == "android" {
-		return []string{"ncku://"}
+	if c.AppType == AppTypeAndroid {
+		//return []string{"ncku://"}
+		// TODO currently fosite does not allows non https as a redirect uri,
+		// but https is not necessary needed on Android for redirection,
+		// one can register a custom schema which allows user login via browser and redirect the access token
+		// back to native app
+		return []string{"http://localhost"}
 	} else {
 		return []string{c.RedirectURI}
 	}
 }
 
 // Returns the client's allowed grant types.
-func (c *Client) GetGrantTypes() fosite.Arguments {
+func (c *GoRvpClient) GetGrantTypes() fosite.Arguments {
 	// TODO refactoring
 	switch c.AppType {
-	case "web_backend":
+	case AppTypeWebBackend:
 		return []string{"authorization_code"}
-	case "web_app":
+	case AppTypeWebApp:
 		return []string{"implicit"}
-	case "android":
+	case AppTypeAndroid:
 		return []string{"implicit"}
-	case "ios":
+	case AppTypeIos:
 		return []string{"implicit"}
-	case "trusted":
+	case AppTypeTrusted:
 		return []string{"password"}
 	}
 	return []string{}
 }
 
 // Returns the client's allowed response types.
-func (c *Client) GetResponseTypes() fosite.Arguments {
+func (c *GoRvpClient) GetResponseTypes() fosite.Arguments {
 	// TODO refactoring
 	switch c.AppType {
-	case "web_backend":
+	case AppTypeWebBackend:
 		return fosite.Arguments{"code", "token"}
-	case "web_app":
+	case AppTypeWebApp:
 		return fosite.Arguments{"token"}
-	case "android":
+	case AppTypeAndroid:
 		return fosite.Arguments{"token"}
-	case "ios":
+	case AppTypeIos:
 		return fosite.Arguments{"token"}
-	case "trusted":
+	case AppTypeTrusted:
 		return fosite.Arguments{"token"}
 	}
 	return fosite.Arguments{}
 }
 
 // Returns the client's owner.
-func (c *Client) GetOwner() string {
+func (c *GoRvpClient) GetOwner() string {
+	// TODO
 	return ""
 }
 
 // Returns the scopes this client was granted.
-func (c *Client) GetGrantedScopes() fosite.Scopes {
+func (c *GoRvpClient) GetGrantedScopes() fosite.Scopes {
 	json.Unmarshal([]byte(c.ScopesJSON), &c.Scopes)
 	return &c.Scopes;
+}
+
+func (c *GoRvpClient) GetAppType() string {
+	return c.AppType
+}
+
+func (c *GoRvpClient) GetPackageName() string {
+	return c.PackageName
+}
+
+func (c *GoRvpClient) GetKeyHash() string {
+	return c.KeyHash
+}
+
+func (c *GoRvpClient) GetStartActivity() string {
+	return c.StartActivity
 }
 
 func (s *Scopes) Grant(requestScope string) bool {

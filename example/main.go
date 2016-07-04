@@ -224,14 +224,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "client is not trusted", http.StatusForbidden)
 		return
 	}
-	//req.ParseForm()
-
-	// TODO get client app type
-	// switch app type
-	// if app type eq android
-	// check package name, key-hash
-	// return start activity
-
+	req.ParseForm()
 
 	// TODO check if the user has permission to access admin API, and the request client is also trusted
 	// if authorizeRequest.GetScopes().Has("admin") {
@@ -250,8 +243,10 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		oauth2.WriteAuthorizeError(rw, ar, err)
 		return
 	}
+
 	// check scopes
-	clientScopes := ar.GetClient().GetGrantedScopes()
+	client := ar.GetClient().(gorvp.Client)
+	clientScopes := client.GetGrantedScopes()
 	for _, requestScope := range ar.GetScopes() {
 		if requestScope == oauth2.GetMandatoryScope() {
 			// every client has permission on mandatory scope by default
@@ -264,7 +259,6 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-
 	// Now that the user is authorized, we set up a session:
 	mySessionData := gorvp.NewSession(jwtClaims.Subject, ar.GetScopes())
 
@@ -272,6 +266,23 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
 	// to support open id connect.
 	response, err := oauth2.NewAuthorizeResponse(ctx, req, ar, mySessionData)
+
+	// check app type and revelavent check
+	validClient := true
+	switch client.GetAppType() {
+	case gorvp.AppTypeAndroid:
+		if client.GetPackageName() != ar.GetRequestForm().Get("package_name") {
+			validClient = false
+		} else if client.GetKeyHash() != ar.GetRequestForm().Get("key_hash") {
+			validClient = false
+		}
+		if validClient {
+			response.AddFragment("start_activity", client.GetStartActivity())
+		} else {
+			http.Error(rw, "not valid client", http.StatusForbidden)
+			return
+		}
+	}
 
 	// Catch any errors, e.g.:
 	// * unknown client

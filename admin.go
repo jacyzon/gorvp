@@ -60,28 +60,31 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	// | ios         | implicit           | token         | IOSGrant     |
 	// | trusted     | password           | token         |              |
 	// ===================================================================
-	client := Client{
+	client := GoRvpClient{
 		Name: createClientRequest.Name,
 		AppType: createClientRequest.AppType,
 	}
 	switch createClientRequest.AppType {
-	case "web_backend":
+	case AppTypeWebBackend:
 		client.RedirectURI = createClientRequest.RedirectURI
 		break
-	case "web_app":
+	case AppTypeWebApp:
 		client.RedirectURI = createClientRequest.RedirectURI
 		break
-	case "android":
+	case AppTypeAndroid:
 		client.StartActivity = createClientRequest.StartActivity
 		client.PackageName = createClientRequest.PackageName
 		client.KeyHash = createClientRequest.KeyHash
 		break
-	case "ios":
+	case AppTypeIos:
 		// not implemented yet
 		break
-	case "trusted":
+	case AppTypeTrusted:
 		client.RedirectURI = createClientRequest.RedirectURI
 		break
+	default:
+		http.Error(w, "Unsupported app type", http.StatusBadRequest)
+		return
 	}
 	scopeJson, _ := json.Marshal(createClientRequest.Scope)
 	client.ScopesJSON = string(scopeJson)
