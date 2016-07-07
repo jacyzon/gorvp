@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
+	"github.com/ory-am/fosite"
 )
 
 type Session struct {
@@ -12,14 +13,14 @@ type Session struct {
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(user string, scopes []string) *Session {
+func NewSession(user string, scopes fosite.Arguments) *Session {
 	session := &Session{
 		User: user,
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
 				Issuer:    "https://api.gorvp.dev",
 				Subject:   user,
-				Audience:  "trusted_audience",	// TODO client id
+				Audience:  "trusted_audience", // TODO client id
 				ExpiresAt: time.Now().Add(time.Hour * 6),
 				IssuedAt:  time.Now(),
 				Extra: map[string]interface{}{

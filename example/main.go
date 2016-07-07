@@ -180,12 +180,15 @@ func main() {
 	))
 	router.PathPrefix("/v1/ping").Handler(negroni.New(
 		moose.NewMiddleware(false),
+		gorvp.NewJwtProxy(selectedStrategy),
 		negroni.Wrap(pingRoute),
 	))
 	router.PathPrefix("/v1/foo").Handler(negroni.New(
+		gorvp.NewJwtProxy(selectedStrategy),
 		negroni.Wrap(fooRoute),
 	))
 	router.PathPrefix("/v1/pub").Handler(negroni.New(
+		gorvp.NewJwtProxy(selectedStrategy),
 		negroni.Wrap(pubRoute),
 	))
 
