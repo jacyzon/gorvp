@@ -1,8 +1,8 @@
 {
     "api.example.com": {
-        "/v1/auth": {
+        "/auth": {
             "backend": "example-auth-v1",
-            "comment": "token endpoint",
+            "comment": "auth endpoint",
             "plugins": [
                 "rate-limit"
             ]
@@ -11,20 +11,48 @@
             "backend": "example-foo-v1",
             "comment": "public endpoint"
         },
+        "/v1/semi_pub": {
+            "backend": "example-foo-v1",
+            "comment": "public endpoint",
+            "scopes": [
+                "gorvp"
+            ]
+        },
         "/v1/foo": {
             "backend": "example-foo-v1",
             "comment": "foo bar endpoint",
             "plugins": [
-                "auth"
+                "jwt_proxy"
+            ],
+            "scopes": [
+                "foo"
             ]
         },
         "/v1/ping": {
             "backend": "example-foo-v1",
             "comment": "ping pong endpoint",
             "plugins": [
-                "auth"
+                "jwt_proxy"
+            ],
+            "scopes": [
+                "ping"
+            ]
+        },
+        "*": {
+            "backend": "docs.example.com",
+            "comment": "route not found to document site",
+            "plugins": [
+                "jwt_proxy"
             ]
         }
     },
-    "*": "docs.example.com"
+    "*": {
+        "*": {
+            "backend": "docs.example.com",
+            "comment": "route not found to document site",
+            "plugins": [
+                "jwt_proxy"
+            ]
+        }
+    }
 }

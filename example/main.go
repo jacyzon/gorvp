@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"time"
 	"net/http"
 	"github.com/urfave/negroni"
-	"github.com/xyproto/mooseware"
 	"github.com/gorilla/mux"
 	"github.com/pilu/xrequestid"
 	"github.com/jacyzon/gorvp"
@@ -133,10 +131,10 @@ func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
 var oauth2 fosite.OAuth2Provider
 
 func main() {
-	config := gorvp.Config{}
-	config.Load("../fixtures/backend.json", "../fixtures/scope.json")
-	fmt.Println(config.Backend)
-	fmt.Println(config.Scope)
+	config := &gorvp.Config{}
+	config.Load("../fixtures/backend.json")
+
+	gorvp.SetupSites(config)
 
 	db, err := gorm.Open("sqlite3", "/tmp/gorm.db")
 	if err != nil {
@@ -149,48 +147,23 @@ func main() {
 	oauth2 = fositeFactory(&store)
 
 	authRoute := mux.NewRouter()
-	authRoute.HandleFunc("/auth", authEndpoint)
+	authRoute.HandleFunc("/oauth", authEndpoint)
 
 	tokenRoute := mux.NewRouter()
 	tokenRoute.HandleFunc("/token", tokenEndpoint)
 
-	pingRoute := mux.NewRouter()
-	pingRoute.HandleFunc("/v1/ping", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprint(w, "pong")
-	})
-
-	fooRoute := mux.NewRouter()
-	fooRoute.HandleFunc("/v1/foo", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprint(w, "bar")
-	})
-
-	pubRoute := mux.NewRouter()
-	pubRoute.HandleFunc("/v1/pub", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprint(w, "pub")
-	})
-
 	router := mux.NewRouter()
-	router.PathPrefix("/auth").Handler(negroni.New(
-		moose.NewMiddleware(true),
+	router.PathPrefix("/oauth").Handler(negroni.New(
 		negroni.Wrap(authRoute),
 	))
 	router.PathPrefix("/token").Handler(negroni.New(
-		moose.NewMiddleware(true),
 		negroni.Wrap(tokenRoute),
 	))
-	router.PathPrefix("/v1/ping").Handler(negroni.New(
-		moose.NewMiddleware(false),
-		gorvp.NewJwtProxy(selectedStrategy),
-		negroni.Wrap(pingRoute),
-	))
-	router.PathPrefix("/v1/foo").Handler(negroni.New(
-		gorvp.NewJwtProxy(selectedStrategy),
-		negroni.Wrap(fooRoute),
-	))
-	router.PathPrefix("/v1/pub").Handler(negroni.New(
-		gorvp.NewJwtProxy(selectedStrategy),
-		negroni.Wrap(pubRoute),
-	))
+
+	// TODO plugins support
+	jwtProxy := gorvp.NewJwtProxy(selectedStrategy, config)
+	m := negroni.New(jwtProxy)
+	config.SetupRoute(router, m)
 
 	// admin API
 	adminHandler := gorvp.AdminHandler{

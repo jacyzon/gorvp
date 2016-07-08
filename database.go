@@ -80,6 +80,18 @@ type Scope struct {
 
 type Scopes []Scope
 
+type ScopeRanger interface {
+	GetScopeName(i int) string
+}
+
+func (scopes Scopes) GetScopeName(i int) string {
+	scopeSlice := []Scope(scopes)
+	if i > len(scopeSlice) - 1 {
+		return ""
+	}
+	return scopeSlice[i].Name;
+}
+
 func (db *DB) Migrate() {
 	db.DB.AutoMigrate(&GoRvpClient{})
 	db.DB.AutoMigrate(&AuthorizeCode{})
@@ -332,20 +344,28 @@ func (c *GoRvpClient) GetStartActivity() string {
 }
 
 func (s *Scopes) Grant(requestScope string) bool {
-	// TODO refactoring
-	for _, scope := range *s {
+	return CheckGrant(s, requestScope)
+}
+
+func CheckGrant(scopes ScopeRanger, requestScope string) bool {
+	i := 0
+	for true {
+		scope := scopes.GetScopeName(i);
+		if scope == "" {
+			break
+		}
 		// foo == foo -> true
-		if scope.Name == requestScope {
+		if scope == requestScope {
 			return true
 		}
 
 		// picture.read > picture -> false (scope picture includes read, write, ...)
-		if len(scope.Name) > len(requestScope) {
+		if len(scope) > len(requestScope) {
 			continue
 		}
 
 		needles := strings.Split(requestScope, ".")
-		haystack := strings.Split(scope.Name, ".")
+		haystack := strings.Split(scope, ".")
 		haystackLen := len(haystack) - 1
 		for k, needle := range needles {
 			if haystackLen < k {
@@ -357,6 +377,7 @@ func (s *Scopes) Grant(requestScope string) bool {
 				continue
 			}
 		}
+		i++
 	}
 	return false
 }
