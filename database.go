@@ -18,9 +18,10 @@ type GoRvpClient struct {
 	gorm.Model
 	Name       string
 	Secret     string
-	AppType    string `json:"app_type"`
+	AppType    string
 	Scopes     Scopes `gorm:"-"`
 	ScopesJSON string `gorm:"size:1023"`
+	Trusted    bool
 	OAuthData
 	AndroidData
 }
@@ -31,13 +32,14 @@ type Client interface {
 	GetPackageName() string
 	GetKeyHash() string
 	GetStartActivity() string
+	IsTrusted() bool
 }
 
 const AppTypeAndroid = "android"
 const AppTypeIos = "ios"
 const AppTypeWebApp = "web_app"
 const AppTypeWebBackend = "web_backend"
-const AppTypeTrusted = "trusted"
+const AppTypeOwner = "owner"
 
 type AuthorizeCode struct {
 	gorm.Model
@@ -79,18 +81,6 @@ type Scope struct {
 }
 
 type Scopes []Scope
-
-type ScopeRanger interface {
-	GetScopeName(i int) string
-}
-
-func (scopes Scopes) GetScopeName(i int) string {
-	scopeSlice := []Scope(scopes)
-	if i > len(scopeSlice) - 1 {
-		return ""
-	}
-	return scopeSlice[i].Name;
-}
 
 func (db *DB) Migrate() {
 	db.DB.AutoMigrate(&GoRvpClient{})
@@ -256,7 +246,12 @@ func (c *GoRvpClient) TableName() string {
 
 // GetID returns the client ID.
 func (c *GoRvpClient) GetID() string {
-	return string(c.ID);
+	return strconv.Itoa(int(c.ID))
+}
+
+// return if client is trusted
+func (c *GoRvpClient) IsTrusted() bool {
+	return c.Trusted
 }
 
 // GetHashedSecret returns the hashed secret as it is stored in the store.
@@ -291,7 +286,7 @@ func (c *GoRvpClient) GetGrantTypes() fosite.Arguments {
 		return []string{"implicit"}
 	case AppTypeIos:
 		return []string{"implicit"}
-	case AppTypeTrusted:
+	case AppTypeOwner:
 		return []string{"password"}
 	}
 	return []string{}
@@ -309,7 +304,7 @@ func (c *GoRvpClient) GetResponseTypes() fosite.Arguments {
 		return fosite.Arguments{"token"}
 	case AppTypeIos:
 		return fosite.Arguments{"token"}
-	case AppTypeTrusted:
+	case AppTypeOwner:
 		return fosite.Arguments{"token"}
 	}
 	return fosite.Arguments{}
@@ -344,13 +339,16 @@ func (c *GoRvpClient) GetStartActivity() string {
 }
 
 func (s *Scopes) Grant(requestScope string) bool {
-	return CheckGrant(s, requestScope)
+	ss := []Scope(*s)
+	scopes := make([]string, len(ss))
+	for i, scope := range ss {
+		scopes[i] = scope.Name
+	}
+	return CheckGrant(scopes, requestScope)
 }
 
-func CheckGrant(scopes ScopeRanger, requestScope string) bool {
-	i := 0
-	for true {
-		scope := scopes.GetScopeName(i);
+func CheckGrant(scopes []string, requestScope string) bool {
+	for _, scope := range scopes {
 		if scope == "" {
 			break
 		}
@@ -377,7 +375,6 @@ func CheckGrant(scopes ScopeRanger, requestScope string) bool {
 				continue
 			}
 		}
-		i++
 	}
 	return false
 }

@@ -27,12 +27,13 @@ type CreateClientRequest struct {
 	Name    string `json:"name"`
 	AppType string `json:"app_type"`
 	Scope   Scopes `json:"scope"`
+	Trusted bool   `json:"trusted"`
 	OAuthData
 	AndroidData
 }
 
 type CreateClientResponse struct {
-	Id     uint `json:"id"` // TODO switch to uuid
+	Id     uint   `json:"id"` // TODO switch to uuid
 	Secret string `json:"secret"`
 }
 
@@ -47,21 +48,22 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&createClientRequest)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest);
+		return
 	}
 	// TODO appType to grantTypes and ResponseTypes helper
 	// TODO data validation
 
-	// ===================================================================
-	// | AppType     | GrantTypes         | ResponseTypes | Data Type    |
-	// -------------------------------------------------------------------
-	// | web_backend | authorization_code | code, token   | OAuthGrant   |
-	// | web_app     | implicit           | token         | OAuthGrant   |
-	// | android     | implicit           | token         | AndroidGrant |
-	// | ios         | implicit           | token         | IOSGrant     |
-	// | trusted     | password           | token         |              |
-	// ===================================================================
+	// ==================================================================
+	// | AppType     | GrantTypes         | ResponseTypes | Data Type   |
+	// ------------------------------------------------------------------
+	// | web_backend | authorization_code | code, token   | OAuthData   |
+	// | web_app     | implicit           | token         | OAuthData   |
+	// | android     | implicit           | token         | AndroidData |
+	// | ios         | implicit           | token         |             |
+	// | trusted     | password           | token         |             |
+	// ==================================================================
 	client := GoRvpClient{
-		Name: createClientRequest.Name,
+		Name:    createClientRequest.Name,
 		AppType: createClientRequest.AppType,
 	}
 	switch createClientRequest.AppType {
@@ -79,8 +81,11 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	case AppTypeIos:
 		// not implemented yet
 		break
-	case AppTypeTrusted:
+	case AppTypeOwner:
 		client.RedirectURI = createClientRequest.RedirectURI
+		if createClientRequest.Trusted {
+			client.Trusted = createClientRequest.Trusted
+		}
 		break
 	default:
 		http.Error(w, "Unsupported app type", http.StatusBadRequest)

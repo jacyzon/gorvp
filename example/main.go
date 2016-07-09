@@ -129,6 +129,7 @@ func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
 
 // This is our fosite instance
 var oauth2 fosite.OAuth2Provider
+var store gorvp.DB
 
 func main() {
 	config := &gorvp.Config{}
@@ -141,7 +142,7 @@ func main() {
 		panic("Cannot open database.")
 	}
 
-	store := gorvp.DB{DB: db}
+	store = gorvp.DB{DB: db}
 	store.Migrate()
 
 	oauth2 = fositeFactory(&store)
@@ -190,15 +191,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "token is not valid", http.StatusUnauthorized)
 		return
 	}
-
-	// check if the token is from trusted client
 	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
-	// TODO check app type 2
-	if !trustedClient[jwtClaims.Audience] {
-		http.Error(rw, "client is not trusted", http.StatusForbidden)
-		return
-	}
-	req.ParseForm()
 
 	// TODO check if the user has permission to access admin API, and the request client is also trusted
 	// if authorizeRequest.GetScopes().Has("admin") {
@@ -211,6 +204,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Let's create an AuthorizeRequest object!
 	// It will analyze the request and extract important information like scopes, response type and others.
+	req.ParseForm()
 	ar, err := oauth2.NewAuthorizeRequest(ctx, req)
 	if err != nil {
 		log.Printf("Error occurred in NewAuthorizeRequest: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
@@ -218,40 +212,45 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// check scopes
-	client := ar.GetClient().(gorvp.Client)
-	clientScopes := client.GetGrantedScopes()
-	for _, requestScope := range ar.GetScopes() {
-		if requestScope == oauth2.GetMandatoryScope() {
-			// every client has permission on mandatory scope by default
-			continue
-		}
-		if clientScopes.Grant(requestScope) {
-			ar.GrantScope(requestScope)
-		} else {
-			http.Error(rw, "client has no permission on requested scopes", http.StatusForbidden)
-			return
-		}
+	// check if the token is from trusted client
+	authTokenClient, err := store.GetClient(jwtClaims.Audience)
+	if err != nil {
+		http.Error(rw, "token is not valid", http.StatusUnauthorized)
+		return
 	}
+	authTokenRVPClient := authTokenClient.(gorvp.Client)
+	if !authTokenRVPClient.IsTrusted() {
+		http.Error(rw, "client is not trusted", http.StatusForbidden)
+		return
+	}
+
+	// check scopes
+	err = gorvp.GrantScope(oauth2, ar)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusForbidden)
+		return
+	}
+	requestClient := ar.GetClient().(gorvp.Client)
+
 	// Now that the user is authorized, we set up a session:
-	mySessionData := gorvp.NewSession(jwtClaims.Subject, ar.GetScopes())
+	session := gorvp.NewSession(jwtClaims.Subject, ar.GetGrantedScopes(), requestClient.GetID())
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
 	// to support open id connect.
-	response, err := oauth2.NewAuthorizeResponse(ctx, req, ar, mySessionData)
+	response, err := oauth2.NewAuthorizeResponse(ctx, req, ar, session)
 
-	// check app type and revelavent check
+	// check app type and relevant check
 	validClient := true
-	switch client.GetAppType() {
+	switch requestClient.GetAppType() {
 	case gorvp.AppTypeAndroid:
-		if client.GetPackageName() != ar.GetRequestForm().Get("package_name") {
+		if requestClient.GetPackageName() != ar.GetRequestForm().Get("package_name") {
 			validClient = false
-		} else if client.GetKeyHash() != ar.GetRequestForm().Get("key_hash") {
+		} else if requestClient.GetKeyHash() != ar.GetRequestForm().Get("key_hash") {
 			validClient = false
 		}
 		if validClient {
-			response.AddFragment("start_activity", client.GetStartActivity())
+			response.AddFragment("start_activity", requestClient.GetStartActivity())
 		} else {
 			http.Error(rw, "not valid client", http.StatusForbidden)
 			return
@@ -277,10 +276,26 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	mySessionData := gorvp.NewSession("", []string{})
+	session := gorvp.NewSession("", []string{}, "")
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
-	accessRequest, err := oauth2.NewAccessRequest(ctx, req, mySessionData)
+	ar, err := oauth2.NewAccessRequest(ctx, req, session)
+
+	if ar.GetGrantTypes().Exact("password") {
+		ar.GrantScope(oauth2.GetMandatoryScope() + "_password")
+	} else {
+		err = gorvp.GrantScope(oauth2, ar)
+	}
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	username := req.PostForm.Get("username")
+	session.JWTClaims.Audience = ar.GetClient().GetID()
+	session.JWTClaims.Subject = username
+	gorvp.SetScopesInJWT(ar.GetGrantedScopes(), session)
+
 
 	// Catch any errors, e.g.:
 	// * unknown client
@@ -288,28 +303,23 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// * ...
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
-		oauth2.WriteAccessError(rw, accessRequest, err)
+		oauth2.WriteAccessError(rw, ar, err)
 		return
 	}
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
 	// and aggregate the result in response.
-	response, err := oauth2.NewAccessResponse(ctx, req, accessRequest)
+	response, err := oauth2.NewAccessResponse(ctx, req, ar)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessResponse: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
-		oauth2.WriteAccessError(rw, accessRequest, err)
+		oauth2.WriteAccessError(rw, ar, err)
 		return
 	}
 
 	// All done, send the response.
-	oauth2.WriteAccessResponse(rw, accessRequest, response)
+	oauth2.WriteAccessResponse(rw, ar, response)
 
 	// The client now has a valid access token
-}
-
-// TODO remove 3
-var trustedClient = map[string]bool{
-	"trusted_audience": true,
 }
 
 // TODO remove nbf 4
@@ -318,3 +328,4 @@ var trustedClient = map[string]bool{
 // TODO http method based scope
 // TODO split router and issuer
 // TODO admin console
+// TODO router public key

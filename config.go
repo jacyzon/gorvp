@@ -22,13 +22,6 @@ type Backend struct {
 
 type ConfigScopes []string
 
-func (scopes ConfigScopes) GetScopeName(i int) string {
-	if i > len(scopes) - 1 {
-		return ""
-	}
-	return scopes[i];
-}
-
 func Read(filename string) (BackendDocument, error) {
 	backendDoc := make(BackendDocument)
 	content, err := ioutil.ReadFile(filename)
