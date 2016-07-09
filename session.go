@@ -6,6 +6,7 @@ import (
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
 	"errors"
+	"github.com/pborman/uuid"
 )
 
 type Session struct {
@@ -17,6 +18,7 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 	session := &Session{
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
+				JTI:       uuid.New(),
 				Issuer:    "https://api.gorvp.dev",
 				Subject:   userID,
 				Audience:  clientID,

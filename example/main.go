@@ -323,7 +323,6 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 }
 
 // TODO remove nbf 4
-// TODO jwt id
 // TODO read in RS key
 // TODO http method based scope
 // TODO split router and issuer
