@@ -317,7 +317,7 @@ func (c *GoRvpClient) GetResponseTypes() fosite.Arguments {
 
 // Returns the client's owner.
 func (c *GoRvpClient) GetOwner() string {
-	// TODO
+	// TODO #6 external owner request
 	return ""
 }
 

@@ -180,22 +180,20 @@ func main() {
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// validate token
-	// TODO bearer token
-	_, token, ok := req.BasicAuth()
-	if !ok {
-		http.Error(rw, "missing authorization header", http.StatusBadRequest)
+	token, err := gorvp.GetBearerToken(req)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err := jwtStrategy.Validate(token)
+	parsedToken, err := jwtStrategy.Decode(token)
 	if err != nil {
 		http.Error(rw, "token is not valid", http.StatusUnauthorized)
 		return
 	}
-	parsedToken, _ := jwtStrategy.Decode(token)
 
 	// check if the token is from trusted client
 	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
-	// TODO check app type
+	// TODO check app type 2
 	if !trustedClient[jwtClaims.Audience] {
 		http.Error(rw, "client is not trusted", http.StatusForbidden)
 		return
@@ -309,7 +307,14 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// The client now has a valid access token
 }
 
-// TODO remove
+// TODO remove 3
 var trustedClient = map[string]bool{
 	"trusted_audience": true,
 }
+
+// TODO remove nbf 4
+// TODO jwt id
+// TODO read in RS key
+// TODO http method based scope
+// TODO split router and issuer
+// TODO admin console

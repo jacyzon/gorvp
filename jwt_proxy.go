@@ -5,6 +5,8 @@ import (
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
 	"reflect"
+	"strings"
+	"fmt"
 )
 
 type JwtProxy struct {
@@ -34,11 +36,9 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 			return
 		}
 
-		// TODO bearer token, move into helper
-		// duplicate code, see authEndpoint handler in main
-		_, token, ok := r.BasicAuth()
-		if !ok {
-			http.Error(rw, "missing authorization header", http.StatusBadRequest)
+		token, err := GetBearerToken(r)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 		parsedToken, err := jwtp.Strategy.Decode(token)
@@ -76,3 +76,18 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 
 	http.Error(rw, "no permission", http.StatusForbidden)
 }
+
+func GetBearerToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", nil // no token
+	}
+
+	authHeaderParts := strings.Split(authHeader, " ")
+	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
+		return "", fmt.Errorf("Authorization header format must be bearer token")
+	}
+
+	return authHeaderParts[1], nil
+}
+

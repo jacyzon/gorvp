@@ -20,7 +20,7 @@ func NewSession(user string, scopes fosite.Arguments) *Session {
 			JWTClaims: &jwt.JWTClaims{
 				Issuer:    "https://api.gorvp.dev",
 				Subject:   user,
-				Audience:  "trusted_audience", // TODO client id
+				Audience:  "trusted_audience", // TODO client id 5
 				ExpiresAt: time.Now().Add(time.Hour * 6),
 				IssuedAt:  time.Now(),
 				Extra: map[string]interface{}{
