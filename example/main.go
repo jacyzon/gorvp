@@ -23,6 +23,7 @@ import (
 	"log"
 	"github.com/pkg/errors"
 	"github.com/ory-am/fosite/hash"
+	"fmt"
 )
 
 func MustRSAKey() *rsa.PrivateKey {
@@ -188,7 +189,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 	parsedToken, err := jwtStrategy.Decode(token)
 	if err != nil {
-		http.Error(rw, "token is not valid", http.StatusUnauthorized)
+		http.Error(rw, "token is invalid", http.StatusUnauthorized)
 		return
 	}
 	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
@@ -215,7 +216,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// check if the token is from trusted client
 	authTokenClient, err := store.GetClient(jwtClaims.Audience)
 	if err != nil {
-		http.Error(rw, "token is not valid", http.StatusUnauthorized)
+		http.Error(rw, "token is invalid", http.StatusUnauthorized)
 		return
 	}
 	authTokenRVPClient := authTokenClient.(gorvp.Client)
@@ -234,6 +235,9 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Now that the user is authorized, we set up a session:
 	session := gorvp.NewSession(jwtClaims.Subject, ar.GetGrantedScopes(), requestClient.GetID())
+	fmt.Println(session.JWTClaims.IssuedAt)
+	fmt.Println(session.JWTClaims.ExpiresAt)
+	fmt.Println(session.JWTClaims.NotBefore)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -277,6 +281,9 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Create an empty session object which will be passed to the request handlers
 	session := gorvp.NewSession("", []string{}, "")
+	fmt.Println(session.JWTClaims.IssuedAt)
+	fmt.Println(session.JWTClaims.ExpiresAt)
+	fmt.Println(session.JWTClaims.NotBefore)
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
@@ -322,9 +329,9 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// The client now has a valid access token
 }
 
-// TODO remove nbf 4
 // TODO read in RS key
 // TODO http method based scope
 // TODO split router and issuer
 // TODO admin console
 // TODO router public key
+// TODO write test

@@ -19,11 +19,12 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
 				JTI:       uuid.New(),
-				Issuer:    "https://api.gorvp.dev",
+				Issuer:    "https://api.gorvp.dev", // TODO move into config
 				Subject:   userID,
 				Audience:  clientID,
-				ExpiresAt: time.Now().Add(time.Hour * 6),
+				ExpiresAt: time.Now().Add(time.Hour * 6), // TODO move into config
 				IssuedAt:  time.Now(),
+				NotBefore: time.Now(),
 			},
 			JWTHeader: &jwt.Headers{
 				Extra: make(map[string]interface{}),
