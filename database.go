@@ -4,12 +4,12 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/ory-am/fosite"
 	"encoding/json"
-	"strconv"
 	"golang.org/x/net/context"
 	"time"
 	"strings"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
+	"github.com/pborman/uuid"
 )
 
 type DB struct {
@@ -18,7 +18,10 @@ type DB struct {
 }
 
 type GoRvpClient struct {
-	gorm.Model
+	ID         string `gorm:"primary_key"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  *time.Time `sql:"index"`
 	Name       string
 	Secret     string
 	AppType    string
@@ -96,12 +99,9 @@ func (db *DB) GetClient(id string) (fosite.Client, error) {
 	if id == "" {
 		return nil, fosite.ErrNotFound
 	}
-	intId, _ := strconv.Atoi(id)
 	client := &GoRvpClient{}
 	err := db.DB.Where(&GoRvpClient{
-		Model: gorm.Model{
-			ID: uint(intId),
-		},
+		ID: id,
 	}).First(&client).Error
 	if err != nil {
 		return nil, fosite.ErrNotFound
@@ -254,13 +254,13 @@ func (db *DB) CreateTrustedClient(clientName string) (id string, secret string, 
 		client.Name = clientName
 
 		if err == gorm.ErrRecordNotFound {
+			client.ID = uuid.New()
 			db.DB.Create(&client)
 		} else if err == nil {
 			db.DB.Model(&client).Update(&client)
 		}
 
-		id = strconv.Itoa(int(client.ID))
-		return id, secret, nil
+		return client.ID, secret, nil
 	}
 
 	return "", "", err
@@ -273,7 +273,7 @@ func (c *GoRvpClient) TableName() string {
 
 // GetID returns the client ID.
 func (c *GoRvpClient) GetID() string {
-	return strconv.Itoa(int(c.ID))
+	return c.ID
 }
 
 // return if client is trusted

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
+	"github.com/pborman/uuid"
 )
 
 type AdminHandler struct {
@@ -33,7 +34,7 @@ type CreateClientRequest struct {
 }
 
 type CreateClientResponse struct {
-	Id     uint   `json:"id"` // TODO switch to uuid
+	ID     string `json:"id"`
 	Secret string `json:"secret"`
 }
 
@@ -63,6 +64,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	// | trusted     | password           | token         |             |
 	// ==================================================================
 	client := GoRvpClient{
+		ID:      uuid.New(),
 		Name:    createClientRequest.Name,
 		AppType: createClientRequest.AppType,
 	}
@@ -108,10 +110,10 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 
 	// create response
 	createClientResponse := CreateClientResponse{
-		Id:     client.ID,
+		ID:     client.ID,
 		Secret: unEncryptedSecret,
 	}
-	w.Header().Set("Content-Type", "application/javascript")
+	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(createClientResponse)
 }
 
