@@ -7,9 +7,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pilu/xrequestid"
 	"github.com/jacyzon/gorvp"
+	"github.com/jacyzon/gorvp/example/ident"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/ory-am/fosite"
+	"github.com/ory-am/fosite/hash"
 	"github.com/ory-am/fosite/handler/core"
 	"github.com/ory-am/fosite/handler/core/owner"
 	"github.com/ory-am/fosite/handler/core/refresh"
@@ -22,7 +24,6 @@ import (
 	"crypto/rand"
 	"log"
 	"github.com/pkg/errors"
-	"github.com/ory-am/fosite/hash"
 	"fmt"
 )
 
@@ -35,6 +36,12 @@ func MustRSAKey() *rsa.PrivateKey {
 }
 
 var jwtStrategy = &strategy.RS256JWTStrategy{
+	RS256JWTStrategy: &jwt.RS256JWTStrategy{
+		PrivateKey: MustRSAKey(),
+	},
+}
+
+var jwtInternalStrategy = &strategy.RS256JWTStrategy{
 	RS256JWTStrategy: &jwt.RS256JWTStrategy{
 		PrivateKey: MustRSAKey(),
 	},
@@ -145,22 +152,36 @@ func main() {
 
 	store = gorvp.DB{DB: db}
 	store.Migrate()
-
 	oauth2 = fositeFactory(&store)
 
-	authRoute := mux.NewRouter()
-	authRoute.HandleFunc("/oauth", authEndpoint)
+	id, secret, err := store.CreateTrustedClient("gorvp_api")
+	if err == nil {
+		// TODO log lib
+		fmt.Printf("default trusted api client id: %s, secret: %s\n", id, secret)
+	}
+	oc := &gorvp.OwnerClient{
+		JWTStrategy:          jwtInternalStrategy,
+		IdentityProviderName: "gorvp_identity_provider",
+		ClientID:             id,
+		ClientSecret:         secret,
+		MandatoryScope:       "gorvp",
+		TokenEndpoint:        "http://localhost:3000/token",
+		IdentityEndpoint:     "http://localhost:3000/ident",
+		ReNewTokenDuration:    time.Minute * 30,
+	}
+	store.OC = oc
 
-	tokenRoute := mux.NewRouter()
-	tokenRoute.HandleFunc("/token", tokenEndpoint)
+	// TODO use different one from token issuer, for internal trustworthy
+	identity := &ident.IdentityProvider{jwtInternalStrategy}
 
 	router := mux.NewRouter()
-	router.PathPrefix("/oauth").Handler(negroni.New(
-		negroni.Wrap(authRoute),
+	router.PathPrefix("/auth").Handler(negroni.New(
+		// TODO add limit plugin
+		negroni.Wrap(oc),
 	))
-	router.PathPrefix("/token").Handler(negroni.New(
-		negroni.Wrap(tokenRoute),
-	))
+	router.HandleFunc("/ident", identity.ServeHTTP)
+	router.HandleFunc("/oauth", authEndpoint)
+	router.HandleFunc("/token", tokenEndpoint)
 
 	// TODO plugins support
 	jwtProxy := gorvp.NewJwtProxy(selectedStrategy, config)
@@ -235,9 +256,6 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Now that the user is authorized, we set up a session:
 	session := gorvp.NewSession(jwtClaims.Subject, ar.GetGrantedScopes(), requestClient.GetID())
-	fmt.Println(session.JWTClaims.IssuedAt)
-	fmt.Println(session.JWTClaims.ExpiresAt)
-	fmt.Println(session.JWTClaims.NotBefore)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -281,9 +299,6 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Create an empty session object which will be passed to the request handlers
 	session := gorvp.NewSession("", []string{}, "")
-	fmt.Println(session.JWTClaims.IssuedAt)
-	fmt.Println(session.JWTClaims.ExpiresAt)
-	fmt.Println(session.JWTClaims.NotBefore)
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
@@ -335,3 +350,10 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 // TODO admin console
 // TODO router public key
 // TODO write test
+
+// TODO gorvp module:
+// - router
+// - identity provider
+// - owner client
+// - auth, token (fosite)
+// mount above modules in main

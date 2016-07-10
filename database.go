@@ -8,10 +8,13 @@ import (
 	"golang.org/x/net/context"
 	"time"
 	"strings"
+	"golang.org/x/crypto/bcrypt"
+	"github.com/pilu/xrequestid"
 )
 
 type DB struct {
 	DB *gorm.DB
+	OC *OwnerClient
 }
 
 type GoRvpClient struct {
@@ -204,16 +207,8 @@ func (db *DB) CreateImplicitAccessTokenSession(ctx context.Context, code string,
 	return db.CreateTokenSession(ctx, code, req, false)
 }
 
-func (db *DB) Authenticate(_ context.Context, name string, secret string) error {
-	// TODO request
-	//rel, ok := s.Users[name]
-	//if !ok {
-	//	return fosite.ErrNotFound
-	//}
-	//if rel.Password != secret {
-	//	return errors.New("Invalid credentials")
-	//}
-	return nil
+func (db *DB) Authenticate(ctx context.Context, name string, secret string) error {
+	return db.OC.Authenticate(ctx, name, secret)
 }
 
 func (db *DB) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCode, accessSignature, refreshSignature string, request fosite.Requester) error {
@@ -238,8 +233,40 @@ func (db *DB) PersistRefreshTokenGrantSession(ctx context.Context, originalRefre
 	return nil
 }
 
-// client interface
+func (db *DB) CreateTrustedClient(clientName string) (id string, secret string, err error) {
+	// create one if not exist, or override the first created one
+	client := &GoRvpClient{}
+	err = db.DB.Where(&GoRvpClient{
+		AppType: AppTypeOwner,
+		Trusted: true,
+	}).Order("created_at").First(&client).Error
 
+	if err == nil || err == gorm.ErrRecordNotFound {
+		// generate client secret
+		h := xrequestid.New(16)
+		secret, _ = h.Generate(h.Size)
+		encryptedSecret, _ := bcrypt.GenerateFromPassword([]byte(secret), 10)
+		secretString := string(encryptedSecret)
+
+		client.AppType = AppTypeOwner
+		client.Trusted = true
+		client.Secret = secretString
+		client.Name = clientName
+
+		if err == gorm.ErrRecordNotFound {
+			db.DB.Create(&client)
+		} else if err == nil {
+			db.DB.Model(&client).Update(&client)
+		}
+
+		id = strconv.Itoa(int(client.ID))
+		return id, secret, nil
+	}
+
+	return "", "", err
+}
+
+// client interface TODO dedicated client file
 func (c *GoRvpClient) TableName() string {
 	return "client"
 }
