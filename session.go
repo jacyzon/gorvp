@@ -7,10 +7,12 @@ import (
 	"github.com/ory-am/fosite"
 	"errors"
 	"github.com/pborman/uuid"
+	"strings"
 )
 
 type Session struct {
 	*strategy.JWTSession
+	ScopeSeparator string
 }
 
 // newSession is a helper function for creating a new session
@@ -30,6 +32,7 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 				Extra: make(map[string]interface{}),
 			},
 		},
+		ScopeSeparator: " ",
 	}
 	SetScopesInJWT(scopes, session)
 	return session
@@ -37,7 +40,7 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 
 func SetScopesInJWT(scopes fosite.Arguments, session *Session) {
 	session.JWTClaims.Extra = map[string]interface{}{
-		"scopes": scopes,
+		"scopes": strings.Join(scopes, session.ScopeSeparator),
 	}
 }
 

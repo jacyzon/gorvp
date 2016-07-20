@@ -15,7 +15,8 @@
             "backend": "example-foo-v1",
             "comment": "public endpoint",
             "scopes": [
-                "gorvp"
+                "gorvp",
+                "gorvp_password"
             ]
         },
         "/v1/foo": {
@@ -25,7 +26,8 @@
                 "jwt_proxy"
             ],
             "scopes": [
-                "foo"
+                "foo",
+                "gorvp_password"
             ]
         },
         "/v1/ping": {
@@ -35,7 +37,8 @@
                 "jwt_proxy"
             ],
             "scopes": [
-                "ping"
+                "ping",
+                "gorvp_password"
             ]
         },
         "*": {
