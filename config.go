@@ -22,7 +22,7 @@ type Backend struct {
 
 type ConfigScopes []string
 
-func Read(filename string) (BackendDocument, error) {
+func read(filename string) (BackendDocument, error) {
 	backendDoc := make(BackendDocument)
 	content, err := ioutil.ReadFile(filename)
 
@@ -40,7 +40,7 @@ func Read(filename string) (BackendDocument, error) {
 }
 
 func (config *Config) Load(backendConfigPath string) {
-	raw, _ := Read(backendConfigPath)
+	raw, _ := read(backendConfigPath)
 	config.Backend = raw
 }
 

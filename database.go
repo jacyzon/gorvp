@@ -12,7 +12,7 @@ import (
 	"github.com/pborman/uuid"
 )
 
-type DB struct {
+type Store struct {
 	DB *gorm.DB
 	OC *OwnerClient
 }
@@ -39,6 +39,7 @@ type Client interface {
 	GetKeyHash() string
 	GetStartActivity() string
 	IsTrusted() bool
+	GetName() string
 }
 
 const AppTypeAndroid = "android"
@@ -83,19 +84,26 @@ type AndroidData struct {
 
 type Scope struct {
 	Name     string `json:"name"`
-	Required bool `json:"required"`
+	Required bool   `json:"required"`
 }
 
 type Scopes []Scope
 
-func (db *DB) Migrate() {
+type ScopeInfo struct {
+	Name        string `gorm:"primary_key"`
+	DisplayName string
+	Description string
+}
+
+func (db *Store) Migrate() {
 	db.DB.AutoMigrate(&GoRvpClient{})
 	db.DB.AutoMigrate(&AuthorizeCode{})
 	db.DB.AutoMigrate(&Token{})
+	db.DB.AutoMigrate(&ScopeInfo{})
 }
 
 // store
-func (db *DB) GetClient(id string) (fosite.Client, error) {
+func (db *Store) GetClient(id string) (fosite.Client, error) {
 	if id == "" {
 		return nil, fosite.ErrNotFound
 	}
@@ -109,7 +117,7 @@ func (db *DB) GetClient(id string) (fosite.Client, error) {
 	return client, nil
 }
 
-func (db *DB) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
+func (db *Store) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
 	dataJSON, _ := json.Marshal(req)
 	err := db.DB.Create(&AuthorizeCode{
 		Code: code,
@@ -121,7 +129,7 @@ func (db *DB) CreateAuthorizeCodeSession(_ context.Context, code string, req fos
 	return nil
 }
 
-func (db *DB) GetAuthorizeCodeSession(_ context.Context, code string, _ interface{}) (fosite.Requester, error) {
+func (db *Store) GetAuthorizeCodeSession(_ context.Context, code string, _ interface{}) (fosite.Requester, error) {
 	var dataJSON string
 	err := db.DB.Where(&AuthorizeCode{Code: code }).First(dataJSON).Error
 	if err != nil {
@@ -132,7 +140,7 @@ func (db *DB) GetAuthorizeCodeSession(_ context.Context, code string, _ interfac
 	return req, nil
 }
 
-func (db *DB) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
+func (db *Store) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
 	authorizeCode := AuthorizeCode{Code:code}
 	err := db.DB.Delete(&authorizeCode).Error
 	if err != nil {
@@ -141,7 +149,7 @@ func (db *DB) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
 	return nil
 }
 
-func (db *DB) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) error {
+func (db *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) error {
 	dataJSON, _ := json.Marshal(req)
 	session := req.GetSession().(*Session)
 	err := db.DB.Create(&Token{
@@ -159,7 +167,7 @@ func (db *DB) CreateTokenSession(_ context.Context, signature string, req fosite
 	return nil
 }
 
-func (db *DB) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
+func (db *Store) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
 	var dataJSON string
 	err := db.DB.Where(&Token{Signature: signature}).First(dataJSON).Error
 	if err != nil {
@@ -170,7 +178,7 @@ func (db *DB) GetTokenSession(_ context.Context, signature string, _ interface{}
 	return req, nil
 }
 
-func (db *DB) DeleteTokenSession(_ context.Context, signature string) error {
+func (db *Store) DeleteTokenSession(_ context.Context, signature string) error {
 	token := Token{Signature: signature}
 	err := db.DB.Delete(&token).Error
 	if err != nil {
@@ -179,39 +187,39 @@ func (db *DB) DeleteTokenSession(_ context.Context, signature string) error {
 	return nil
 }
 
-func (db *DB) CreateAccessTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
+func (db *Store) CreateAccessTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
 	return db.CreateTokenSession(ctx, signature, req, false)
 }
 
-func (db *DB) GetAccessTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+func (db *Store) GetAccessTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
 	return db.GetTokenSession(ctx, signature, s)
 }
 
-func (db *DB) DeleteAccessTokenSession(ctx context.Context, signature string) error {
+func (db *Store) DeleteAccessTokenSession(ctx context.Context, signature string) error {
 	return db.DeleteTokenSession(ctx, signature)
 }
 
-func (db *DB) CreateRefreshTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
+func (db *Store) CreateRefreshTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
 	return db.CreateTokenSession(ctx, signature, req, true)
 }
 
-func (db *DB) GetRefreshTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+func (db *Store) GetRefreshTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
 	return db.GetTokenSession(ctx, signature, s)
 }
 
-func (db *DB) DeleteRefreshTokenSession(ctx context.Context, signature string) error {
+func (db *Store) DeleteRefreshTokenSession(ctx context.Context, signature string) error {
 	return db.DeleteTokenSession(ctx, signature)
 }
 
-func (db *DB) CreateImplicitAccessTokenSession(ctx context.Context, code string, req fosite.Requester) error {
+func (db *Store) CreateImplicitAccessTokenSession(ctx context.Context, code string, req fosite.Requester) error {
 	return db.CreateTokenSession(ctx, code, req, false)
 }
 
-func (db *DB) Authenticate(ctx context.Context, name string, secret string) error {
+func (db *Store) Authenticate(ctx context.Context, name string, secret string) error {
 	return db.OC.Authenticate(ctx, name, secret)
 }
 
-func (db *DB) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCode, accessSignature, refreshSignature string, request fosite.Requester) error {
+func (db *Store) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCode, accessSignature, refreshSignature string, request fosite.Requester) error {
 	if err := db.DeleteAuthorizeCodeSession(ctx, authorizeCode); err != nil {
 		return err
 	} else if err := db.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
@@ -222,7 +230,7 @@ func (db *DB) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCod
 	return nil
 }
 
-func (db *DB) PersistRefreshTokenGrantSession(ctx context.Context, originalRefreshSignature, accessSignature, refreshSignature string, request fosite.Requester) error {
+func (db *Store) PersistRefreshTokenGrantSession(ctx context.Context, originalRefreshSignature, accessSignature, refreshSignature string, request fosite.Requester) error {
 	if err := db.DeleteRefreshTokenSession(ctx, originalRefreshSignature); err != nil {
 		return err
 	} else if err := db.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
@@ -233,7 +241,7 @@ func (db *DB) PersistRefreshTokenGrantSession(ctx context.Context, originalRefre
 	return nil
 }
 
-func (db *DB) CreateTrustedClient(clientName string) (id string, secret string, err error) {
+func (db *Store) CreateTrustedClient(clientName string) (id string, secret string, err error) {
 	// create one if not exist, or override the first created one
 	client := &GoRvpClient{}
 	err = db.DB.Where(&GoRvpClient{
@@ -266,6 +274,34 @@ func (db *DB) CreateTrustedClient(clientName string) (id string, secret string, 
 	return "", "", err
 }
 
+func (db *Store) CreateScopeInfo(config *Config) {
+	scopes := make(map[string]bool)
+	for _, backend := range config.Backend {
+		for _, backendConfig := range backend {
+			for _, scope := range backendConfig.Scopes {
+				scopes[scope] = true
+			}
+		}
+	}
+
+	for scopeName, _ := range scopes {
+		// TODO gorm not yet supports batch insert
+		// https://github.com/jinzhu/gorm/issues/255
+		scopeInfo := &ScopeInfo{
+			Name: scopeName,
+			DisplayName: scopeName,
+			Description: "",
+		}
+		if db.DB.NewRecord(scopeInfo) {
+			db.DB.Create(scopeInfo)
+		}
+	}
+}
+
+func (c *ScopeInfo) TableName() string {
+	return "scope"
+}
+
 // client interface TODO dedicated client file
 func (c *GoRvpClient) TableName() string {
 	return "client"
@@ -274,6 +310,10 @@ func (c *GoRvpClient) TableName() string {
 // GetID returns the client ID.
 func (c *GoRvpClient) GetID() string {
 	return c.ID
+}
+
+func (c *GoRvpClient) GetName() string {
+	return c.Name
 }
 
 // return if client is trusted

@@ -54,7 +54,7 @@ type stackTracer interface {
 var selectedStrategy = jwtStrategy
 
 // fositeFactory creates a new Fosite instance with all features enabled
-func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
+func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 	// Instantiate a new fosite instance
 	f := &fosite.Fosite{
 		Store:                       store,
@@ -137,7 +137,7 @@ func fositeFactory(store *gorvp.DB) fosite.OAuth2Provider {
 
 // This is our fosite instance
 var oauth2 fosite.OAuth2Provider
-var store gorvp.DB
+var store gorvp.Store
 
 func main() {
 	config := &gorvp.Config{}
@@ -150,9 +150,11 @@ func main() {
 		panic("Cannot open database.")
 	}
 
-	store = gorvp.DB{DB: db}
+	store = gorvp.Store{DB: db}
 	store.Migrate()
 	oauth2 = fositeFactory(&store)
+
+	store.CreateScopeInfo(config)
 
 	id, secret, err := store.CreateTrustedClient("gorvp_api")
 	if err == nil {
@@ -191,10 +193,12 @@ func main() {
 	// admin API
 	adminHandler := gorvp.AdminHandler{
 		Router:router.PathPrefix("/admin").Subrouter(),
-		DB: db,
+		Store: &store,
 		Hash: xrequestid.New(16),
 	}
 	adminHandler.SetupHandler()
+	// expose only get client api
+	router.HandleFunc("/client/{id}", adminHandler.GetClient)
 
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(router))
