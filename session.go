@@ -26,7 +26,6 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 				Audience:  clientID,
 				ExpiresAt: time.Now().Add(time.Hour * 6), // TODO move into config
 				IssuedAt:  time.Now(),
-				NotBefore: time.Now(),
 			},
 			JWTHeader: &jwt.Headers{
 				Extra: make(map[string]interface{}),
