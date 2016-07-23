@@ -223,12 +223,6 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
 
-	// TODO check if the user has permission to access admin API, and the request client is also trusted
-	// if authorizeRequest.GetScopes().Has("admin") {
-	//     http.Error(rw, "you're not allowed to do that", http.StatusForbidden)
-	//     return
-	// }
-
 	// This context will be passed to all methods.
 	ctx := fosite.NewContext()
 
@@ -261,9 +255,16 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	requestClient := ar.GetClient().(gorvp.Client)
+	grantedScopes := ar.GetGrantedScopes()
+
+	err = store.UpdateConnection(requestClient, jwtClaims.Subject, grantedScopes)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Now that the user is authorized, we set up a session:
-	session := gorvp.NewSession(jwtClaims.Subject, ar.GetGrantedScopes(), requestClient.GetID())
+	session := gorvp.NewSession(jwtClaims.Subject, grantedScopes, requestClient.GetID())
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -311,8 +312,14 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
 
+	username := req.PostForm.Get("username")
 	if ar.GetGrantTypes().Exact("password") {
 		ar.GrantScope(oauth2.GetMandatoryScope() + "_password")
+		err = store.UpdateConnection(ar.GetClient().(gorvp.Client), username, ar.GetGrantedScopes())
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	} else {
 		err = gorvp.GrantScope(oauth2, ar)
 	}
@@ -321,11 +328,9 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	username := req.PostForm.Get("username")
 	session.JWTClaims.Audience = ar.GetClient().GetID()
 	session.JWTClaims.Subject = username
-	gorvp.SetScopesInJWT(ar.GetGrantedScopes(), session)
-
+	session.SetScopes(ar.GetGrantedScopes())
 
 	// Catch any errors, e.g.:
 	// * unknown client
@@ -358,6 +363,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 // TODO admin console
 // TODO router public key
 // TODO write test
+// TODO custom exception for handling http response
 
 // TODO gorvp module:
 // - router

@@ -1,6 +1,8 @@
 package gorvp
 
-import "strings"
+import (
+	"strings"
+)
 
 type Scope struct {
 	Name     string `json:"name"`

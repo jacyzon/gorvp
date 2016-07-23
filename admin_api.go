@@ -53,6 +53,14 @@ type ScopeResponse struct {
 
 type Routes []Route
 
+func (h *AdminHandler) auth(w http.ResponseWriter, r *http.Request) {
+	// TODO check if the user has permission to access admin API, and the request client is also trusted
+	// if authorizeRequest.GetScopes().Has("admin") {
+	//     http.Error(rw, "you're not allowed to do that", http.StatusForbidden)
+	//     return
+	// }
+}
+
 func (h *AdminHandler) GetClients(w http.ResponseWriter, r *http.Request) {
 }
 

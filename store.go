@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
 	"github.com/pborman/uuid"
+	"github.com/go-errors/errors"
 )
 
 type Store struct {
@@ -26,9 +27,6 @@ func (db *Store) Migrate() {
 
 // store
 func (db *Store) GetClient(id string) (fosite.Client, error) {
-	if id == "" {
-		return nil, fosite.ErrNotFound
-	}
 	client := &GoRvpClient{}
 	err := db.DB.Where(&GoRvpClient{
 		ID: id,
@@ -215,4 +213,29 @@ func (db *Store) CreateScopeInfo(config *Config) {
 		}
 		db.DB.FirstOrCreate(scopeInfo)
 	}
+}
+
+func (db *Store) UpdateConnection(client Client, userID string, scopes []string) (error) {
+	connection := Connection{
+		UserID: userID,
+		ClientID: client.GetID(),
+	}
+
+	err := db.DB.Where(connection).First(&connection).Error
+	// connection found
+	if err == nil {
+		db.DB.Model(&connection).Update(Connection{
+			ScopeString: connection.MergeScope(scopes),
+		})
+	} else if err == gorm.ErrRecordNotFound {
+		db.DB.Create(Connection{
+			ID: uuid.New(),
+			UserID: userID,
+			ClientID: client.GetID(),
+			ScopeString: connection.MergeScope(scopes),
+		})
+	} else {
+		return errors.New("database error")
+	}
+	return nil
 }

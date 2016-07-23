@@ -33,14 +33,18 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 		},
 		ScopeSeparator: " ",
 	}
-	SetScopesInJWT(scopes, session)
+	session.SetScopes(scopes)
 	return session
 }
 
-func SetScopesInJWT(scopes fosite.Arguments, session *Session) {
-	session.JWTClaims.Extra = map[string]interface{}{
-		"scopes": strings.Join(scopes, session.ScopeSeparator),
+func (s *Session) SetScopes(scopes fosite.Arguments) {
+	s.JWTClaims.Extra = map[string]interface{}{
+		"scopes": strings.Join(scopes, s.ScopeSeparator),
 	}
+}
+
+func (s *Session) SetConnection(connection Connection) {
+
 }
 
 func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
