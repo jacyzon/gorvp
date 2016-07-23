@@ -56,10 +56,9 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 			scopesJWT = strings.Split(scopesInterface.(string), jwtp.Separator)
 		}
 
-		fmt.Println(scopesJWT)
 		// check grant
 		for _, requestScope := range scopesJWT {
-			grant = CheckGrant(scopes, requestScope)
+			grant = checkGrant(scopes, requestScope)
 			if grant {
 				handler.ServeHTTP(rw, r)
 				return
