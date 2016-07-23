@@ -19,10 +19,16 @@ type Token struct {
 
 	UserID       string `gorm:"index"`
 	ClientID     string `gorm:"index"`
-	Revoke       bool
 	RefreshToken bool
 
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	DeletedAt    *time.Time `sql:"index"`
 }
+
+type ClientRevocation struct {
+	gorm.Model
+	ClientID string
+	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
+}
+

@@ -197,8 +197,12 @@ func main() {
 		Hash: xrequestid.New(16),
 	}
 	adminHandler.SetupHandler()
-	// expose only get client api
-	router.HandleFunc("/client/{id}", adminHandler.GetClient)
+
+	clientHandler := gorvp.ClientHandler{
+		Router:router.PathPrefix("/client").Subrouter(),
+		Store: &store,
+	}
+	clientHandler.SetupHandler()
 
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(router))

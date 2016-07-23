@@ -20,6 +20,8 @@ func (db *Store) Migrate() {
 	db.DB.AutoMigrate(&AuthorizeCode{})
 	db.DB.AutoMigrate(&Token{})
 	db.DB.AutoMigrate(&ScopeInfo{})
+	db.DB.AutoMigrate(&ClientRevocation{})
+	db.DB.AutoMigrate(&Connection{})
 }
 
 // store
@@ -78,7 +80,6 @@ func (db *Store) CreateTokenSession(_ context.Context, signature string, req fos
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
 		UserID: req.GetRequestForm().Get("username"), // TODO or token subject
-		Revoke: false,
 		RefreshToken: refreshToken,
 	}).Error
 	if err != nil {
@@ -212,8 +213,6 @@ func (db *Store) CreateScopeInfo(config *Config) {
 			DisplayName: scopeName,
 			Description: "",
 		}
-		if db.DB.NewRecord(scopeInfo) {
-			db.DB.Create(scopeInfo)
-		}
+		db.DB.FirstOrCreate(scopeInfo)
 	}
 }
