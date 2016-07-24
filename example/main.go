@@ -255,14 +255,14 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	requestClient := ar.GetClient().(gorvp.Client)
 	grantedScopes := ar.GetGrantedScopes()
 
-	err = store.UpdateConnection(requestClient, jwtClaims.Subject, grantedScopes)
+	connection, err := store.UpdateConnection(requestClient, jwtClaims.Subject, grantedScopes)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := gorvp.NewSession(jwtClaims.Subject, grantedScopes, requestClient.GetID())
+	session := gorvp.NewSession(jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -305,30 +305,36 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := gorvp.NewSession("", []string{}, "")
+	session := gorvp.NewSession("", []string{}, "", gorvp.Connection{})
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
 
 	username := req.PostForm.Get("username")
+	var connection gorvp.Connection
 	if ar.GetGrantTypes().Exact("password") {
 		ar.GrantScope(oauth2.GetMandatoryScope() + "_password")
-		err = store.UpdateConnection(ar.GetClient().(gorvp.Client), username, ar.GetGrantedScopes())
+		connection, err = store.UpdateConnection(ar.GetClient().(gorvp.Client), username, ar.GetGrantedScopes())
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			gorvp.WriteError(rw, err)
 			return
 		}
 	} else {
 		err = gorvp.GrantScope(oauth2, ar)
+		if err != nil {
+			gorvp.WriteError(rw, err)
+			return
+		}
+		connection, err = store.GetConnection(ar.GetClient().(gorvp.Client), username)
+		if err != nil {
+			gorvp.WriteError(rw, err)
+			return
+		}
 	}
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusForbidden)
-		return
-	}
-
 	session.JWTClaims.Audience = ar.GetClient().GetID()
 	session.JWTClaims.Subject = username
 	session.SetScopes(ar.GetGrantedScopes())
+	session.SetConnection(connection)
 
 	// Catch any errors, e.g.:
 	// * unknown client

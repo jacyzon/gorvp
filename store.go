@@ -8,7 +8,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
 	"github.com/pborman/uuid"
-	"github.com/go-errors/errors"
 )
 
 type Store struct {
@@ -215,7 +214,23 @@ func (db *Store) CreateScopeInfo(config *Config) {
 	}
 }
 
-func (db *Store) UpdateConnection(client Client, userID string, scopes []string) (error) {
+func (db *Store) GetConnection(client Client, userID string) (Connection, error) {
+	connection := Connection{
+		UserID: userID,
+		ClientID: client.GetID(),
+	}
+
+	err := db.DB.Where(connection).First(&connection).Error
+	// connection found
+	if err != nil {
+		return connection, nil
+	} else if err == gorm.ErrRecordNotFound {
+		return connection, ErrRecordNotFound
+	}
+	return connection, ErrDatabase
+}
+
+func (db *Store) UpdateConnection(client Client, userID string, scopes []string) (Connection, error) {
 	connection := Connection{
 		UserID: userID,
 		ClientID: client.GetID(),
@@ -235,7 +250,7 @@ func (db *Store) UpdateConnection(client Client, userID string, scopes []string)
 			ScopeString: connection.MergeScope(scopes),
 		})
 	} else {
-		return errors.New("database error")
+		return connection, ErrDatabase
 	}
-	return nil
+	return connection, nil
 }

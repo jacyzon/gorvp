@@ -5,7 +5,6 @@ import (
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
-	"errors"
 	"github.com/pborman/uuid"
 	"strings"
 )
@@ -16,7 +15,7 @@ type Session struct {
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(userID string, scopes fosite.Arguments, clientID string) *Session {
+func NewSession(userID string, scopes fosite.Arguments, clientID string, connection Connection) *Session {
 	session := &Session{
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
@@ -34,17 +33,16 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string) *Sessio
 		ScopeSeparator: " ",
 	}
 	session.SetScopes(scopes)
+	session.SetConnection(connection)
 	return session
 }
 
 func (s *Session) SetScopes(scopes fosite.Arguments) {
-	s.JWTClaims.Extra = map[string]interface{}{
-		"scopes": strings.Join(scopes, s.ScopeSeparator),
-	}
+	s.JWTClaims.Add("sco", strings.Join(scopes, s.ScopeSeparator))
 }
 
 func (s *Session) SetConnection(connection Connection) {
-
+	s.JWTClaims.Add("cni", connection.ID)
 }
 
 func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
@@ -60,7 +58,7 @@ func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
 		if clientScopes.Grant(requestScope) {
 			ar.GrantScope(requestScope)
 		} else {
-			return errors.New("client has no permission on requested scopes")
+			return ErrPermissionDenied
 		}
 	}
 	return nil

@@ -16,7 +16,7 @@ type JwtProxy struct {
 
 func NewJwtProxy(strategy *strategy.RS256JWTStrategy, config *Config) *JwtProxy {
 	return &JwtProxy{
-		ScopesKey: "scopes",
+		ScopesKey: "sco",
 		Separator: " ",
 		Strategy: strategy,
 		Config: config,
