@@ -209,6 +209,12 @@ func main() {
 	}
 	tokenHandler.SetupHandler()
 
+	connectionHandler := gorvp.ConnectionHandler{
+		Router:router.PathPrefix("/connections").Subrouter(),
+		Store: &store,
+	}
+	connectionHandler.SetupHandler()
+
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(router))
 	n.Run(":3000")

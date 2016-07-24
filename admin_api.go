@@ -32,18 +32,6 @@ type CreateClientRequest struct {
 	AndroidData
 }
 
-type CreateClientResponse struct {
-	ID     string `json:"id"`
-	Secret string `json:"secret"`
-}
-
-type GetClientResponse struct {
-	ID      string          `json:"id"`
-	Name    string          `json:"name"`
-	LogoUrl string          `json:"logo_url"`
-	Scopes  []ScopeResponse `json:"scopes"`
-}
-
 type ScopeResponse struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"display_name"`

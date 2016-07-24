@@ -12,6 +12,18 @@ type ClientHandler struct {
 	Store  *Store
 }
 
+type CreateClientResponse struct {
+	ID     string `json:"id"`
+	Secret string `json:"secret"`
+}
+
+type GetClientResponse struct {
+	ID      string          `json:"id"`
+	Name    string          `json:"name"`
+	LogoUrl string          `json:"logo_url"`
+	Scopes  []ScopeResponse `json:"scopes"`
+}
+
 func (h *ClientHandler) SetupHandler() {
 	h.Routes = Routes{
 		Route{
@@ -68,5 +80,6 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 		LogoUrl: "", // TODO default client logo
 		Scopes: scopeResponseList,
 	}
+	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(getClientResponse)
 }

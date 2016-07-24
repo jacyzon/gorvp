@@ -13,6 +13,7 @@ var (
 	ErrRecordNotFound = errors.New("Record not found")
 	ErrDatabase = errors.New("Database error")
 	ErrClientPermission = errors.New("client has no permission on requested scopes")
+	ErrConnectionRevoked = errors.New("This connection had been revoked")
 )
 
 type GoRvpError struct {
@@ -57,6 +58,12 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 		return &GoRvpError{
 			Name:        "client_permission",
 			Description: ErrClientPermission.Error(),
+			StatusCode:  http.StatusForbidden,
+		}
+	case ErrConnectionRevoked:
+		return &GoRvpError{
+			Name:        "connection_revoked",
+			Description: ErrConnectionRevoked.Error(),
 			StatusCode:  http.StatusForbidden,
 		}
 	default:
