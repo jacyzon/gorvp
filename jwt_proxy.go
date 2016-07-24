@@ -5,7 +5,6 @@ import (
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
 	"strings"
-	"fmt"
 )
 
 type JwtProxy struct {
@@ -79,7 +78,7 @@ func GetBearerToken(r *http.Request) (string, error) {
 
 	authHeaderParts := strings.Split(authHeader, " ")
 	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
-		return "", fmt.Errorf("Authorization header format must be bearer token")
+		return "", ErrTokenNotFound
 	}
 
 	return authHeaderParts[1], nil

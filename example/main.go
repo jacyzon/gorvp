@@ -35,7 +35,7 @@ func MustRSAKey() *rsa.PrivateKey {
 	return key
 }
 
-var jwtStrategy = &strategy.RS256JWTStrategy{
+var tokenStrategy = &strategy.RS256JWTStrategy{
 	RS256JWTStrategy: &jwt.RS256JWTStrategy{
 		PrivateKey: MustRSAKey(),
 	},
@@ -50,8 +50,6 @@ var jwtInternalStrategy = &strategy.RS256JWTStrategy{
 type stackTracer interface {
 	StackTrace() errors.StackTrace
 }
-
-var selectedStrategy = jwtStrategy
 
 // fositeFactory creates a new Fosite instance with all features enabled
 func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
@@ -70,16 +68,16 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 
 	// Most handlers are composable. This little helper is used by some of the handlers below.
 	oauth2HandleHelper := &core.HandleHelper{
-		AccessTokenStrategy: selectedStrategy,
+		AccessTokenStrategy: tokenStrategy,
 		AccessTokenStorage:  store,
 		AccessTokenLifespan: accessTokenLifespan,
 	}
 
 	// This handler is responsible for the authorization code grant flow
 	explicitHandler := &explicit.AuthorizeExplicitGrantTypeHandler{
-		AccessTokenStrategy:       selectedStrategy,
-		RefreshTokenStrategy:      selectedStrategy,
-		AuthorizeCodeStrategy:     selectedStrategy,
+		AccessTokenStrategy:       tokenStrategy,
+		RefreshTokenStrategy:      tokenStrategy,
+		AuthorizeCodeStrategy:     tokenStrategy,
 		AuthorizeCodeGrantStorage: store,
 		AuthCodeLifespan:          time.Minute * 10,
 		AccessTokenLifespan:       accessTokenLifespan,
@@ -94,7 +92,7 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 	// This handler is responsible for the implicit flow. The implicit flow does not return an authorize code
 	// but instead returns the access token directly via an url fragment.
 	implicitHandler := &implicit.AuthorizeImplicitGrantTypeHandler{
-		AccessTokenStrategy: selectedStrategy,
+		AccessTokenStrategy: tokenStrategy,
 		AccessTokenStorage:  store,
 		AccessTokenLifespan: accessTokenLifespan,
 	}
@@ -119,8 +117,8 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 	// This handler is responsible for the refresh token grant. This type is used when you want to exchange
 	// a refresh token for a new refresh token and a new access token.
 	refreshHandler := &refresh.RefreshTokenGrantHandler{
-		AccessTokenStrategy:      selectedStrategy,
-		RefreshTokenStrategy:     selectedStrategy,
+		AccessTokenStrategy:      tokenStrategy,
+		RefreshTokenStrategy:     tokenStrategy,
 		RefreshTokenGrantStorage: store,
 		AccessTokenLifespan:      accessTokenLifespan,
 	}
@@ -128,7 +126,7 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 
 	// Add a request validator for Access Tokens to fosite
 	f.AuthorizedRequestValidators.Append(&core.CoreValidator{
-		AccessTokenStrategy: selectedStrategy,
+		AccessTokenStrategy: tokenStrategy,
 		AccessTokenStorage:  store,
 	})
 
@@ -142,8 +140,9 @@ var store gorvp.Store
 func main() {
 	config := &gorvp.Config{}
 	config.Load("../fixtures/backend.json")
-
 	gorvp.SetupSites(config)
+
+	gorvp.SetTokenStrategy(tokenStrategy)
 
 	db, err := gorm.Open("sqlite3", "/tmp/gorm.db")
 	if err != nil {
@@ -186,7 +185,7 @@ func main() {
 	router.HandleFunc("/token", tokenEndpoint)
 
 	// TODO plugins support
-	jwtProxy := gorvp.NewJwtProxy(selectedStrategy, config)
+	jwtProxy := gorvp.NewJwtProxy(tokenStrategy, config)
 	m := negroni.New(jwtProxy)
 	config.SetupRoute(router, m)
 
@@ -204,24 +203,23 @@ func main() {
 	}
 	clientHandler.SetupHandler()
 
+	tokenHandler := gorvp.TokenHandler{
+		Router:router.PathPrefix("/token").Subrouter(),
+		Store: &store,
+	}
+	tokenHandler.SetupHandler()
+
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(router))
 	n.Run(":3000")
 }
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
-	// validate token
-	token, err := gorvp.GetBearerToken(req)
+	jwtClaims, err := gorvp.GetTokenClaims(req)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+		gorvp.WriteError(rw, err)
 		return
 	}
-	parsedToken, err := jwtStrategy.Decode(token)
-	if err != nil {
-		http.Error(rw, "token is invalid", http.StatusUnauthorized)
-		return
-	}
-	jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
 
 	// This context will be passed to all methods.
 	ctx := fosite.NewContext()

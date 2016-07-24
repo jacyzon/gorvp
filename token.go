@@ -3,6 +3,9 @@ package gorvp
 import (
 	"github.com/jinzhu/gorm"
 	"time"
+	"net/http"
+	"github.com/ory-am/fosite/token/jwt"
+	"fmt"
 )
 
 type AuthorizeCode struct {
@@ -32,3 +35,16 @@ type ClientRevocation struct {
 	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
 }
 
+func GetTokenClaims(r *http.Request) (*jwt.JWTClaims, error) {
+	token, err := GetBearerToken(r)
+	fmt.Println(token)
+	if err != nil {
+		return nil, ErrTokenNotFound
+	}
+	parsedToken, err := GetTokenStrategy().Decode(token)
+	fmt.Println(parsedToken)
+	if err != nil {
+		return nil, ErrTokenInvalid
+	}
+	return jwt.JWTClaimsFromMap(parsedToken.Claims), nil
+}
