@@ -214,43 +214,54 @@ func (db *Store) CreateScopeInfo(config *Config) {
 	}
 }
 
-func (db *Store) GetConnection(client Client, userID string) (Connection, error) {
-	connection := Connection{
-		UserID: userID,
-		ClientID: client.GetID(),
-	}
+func (db *Store) GetConnectionByID(connectionID string) (*Connection, error) {
+	connection := &Connection{ID: connectionID}
 
-	err := db.DB.Where(connection).First(&connection).Error
-	// connection found
+	err := db.DB.Find(connection).Error
 	if err != nil {
-		return connection, nil
-	} else if err == gorm.ErrRecordNotFound {
-		return connection, ErrRecordNotFound
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrRecordNotFound
+		}
+		return nil, ErrDatabase
 	}
-	return connection, ErrDatabase
+	return connection, nil
 }
 
-func (db *Store) UpdateConnection(client Client, userID string, scopes []string) (Connection, error) {
-	connection := Connection{
+func (db *Store) GetConnection(clientID string, userID string) (*Connection, error) {
+	connection := &Connection{
 		UserID: userID,
-		ClientID: client.GetID(),
+		ClientID: clientID,
 	}
 
-	err := db.DB.Where(connection).First(&connection).Error
+	err := db.DB.Where(connection).Find(connection).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, ErrRecordNotFound
+		}
+		return connection, ErrDatabase
+	}
+	return connection, nil
+}
+
+func (db *Store) UpdateConnection(clientID string, userID string, scopes []string) (*Connection, error) {
+	connection := &Connection{
+		UserID: userID,
+		ClientID: clientID,
+	}
+
+	err := db.DB.Where(connection).Find(&connection).Error
 	// connection found
 	if err == nil {
-		db.DB.Model(&connection).Update(Connection{
-			ScopeString: connection.MergeScope(scopes),
-		})
-	} else if err == gorm.ErrRecordNotFound {
-		db.DB.Create(Connection{
-			ID: uuid.New(),
-			UserID: userID,
-			ClientID: client.GetID(),
-			ScopeString: connection.MergeScope(scopes),
-		})
+		connection.ScopeString = connection.MergeScope(scopes)
+		db.DB.Model(connection).Update(connection)
 	} else {
-		return connection, ErrDatabase
+		if err == gorm.ErrRecordNotFound {
+			connection.ID = uuid.New()
+			connection.ScopeString = connection.MergeScope(scopes)
+			db.DB.Create(connection)
+		} else {
+			return nil, ErrDatabase
+		}
 	}
 	return connection, nil
 }

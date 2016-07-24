@@ -5,7 +5,6 @@ import (
 	"time"
 	"net/http"
 	"github.com/ory-am/fosite/token/jwt"
-	"fmt"
 )
 
 type AuthorizeCode struct {
@@ -35,16 +34,31 @@ type ClientRevocation struct {
 	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
 }
 
-func GetTokenClaims(r *http.Request) (*jwt.JWTClaims, error) {
+func GetTokenClaims(store *Store, r *http.Request) (*jwt.JWTClaims, error) {
+	// get token
 	token, err := GetBearerToken(r)
-	fmt.Println(token)
 	if err != nil {
 		return nil, ErrTokenNotFound
 	}
+	// parse token
 	parsedToken, err := GetTokenStrategy().Decode(token)
-	fmt.Println(parsedToken)
 	if err != nil {
 		return nil, ErrTokenInvalid
 	}
-	return jwt.JWTClaimsFromMap(parsedToken.Claims), nil
+	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+
+	// check token
+	tokenToFind := &Token{ID: claims.JTI}
+	err = store.DB.First(tokenToFind).Error
+	if err != nil {
+		return nil, ErrTokenInvalid
+	}
+
+	// check connection
+	_, err = store.GetConnectionByID(claims.Get("cni").(string))
+	if err != nil {
+		return nil, ErrTokenInvalid
+	}
+
+	return claims, nil
 }

@@ -15,7 +15,7 @@ type Session struct {
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(userID string, scopes fosite.Arguments, clientID string, connection Connection) *Session {
+func NewSession(userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
 	session := &Session{
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
@@ -41,7 +41,7 @@ func (s *Session) SetScopes(scopes fosite.Arguments) {
 	s.JWTClaims.Add("sco", strings.Join(scopes, s.ScopeSeparator))
 }
 
-func (s *Session) SetConnection(connection Connection) {
+func (s *Session) SetConnection(connection *Connection) {
 	s.JWTClaims.Add("cni", connection.ID)
 }
 

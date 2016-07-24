@@ -27,7 +27,7 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 		return &GoRvpError{
 			Name:        "token_invalid",
 			Description: ErrTokenInvalid.Error(),
-			StatusCode:  http.StatusBadRequest,
+			StatusCode:  http.StatusUnauthorized,
 		}
 	case ErrTokenNotFound:
 		return &GoRvpError{
@@ -39,7 +39,7 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 		return &GoRvpError{
 			Name:        "permission_denied",
 			Description: ErrPermissionDenied.Error(),
-			StatusCode:  http.StatusBadRequest,
+			StatusCode:  http.StatusForbidden,
 		}
 	case ErrRecordNotFound:
 		return &GoRvpError{

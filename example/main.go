@@ -185,7 +185,7 @@ func main() {
 	router.HandleFunc("/token", tokenEndpoint)
 
 	// TODO plugins support
-	jwtProxy := gorvp.NewJwtProxy(tokenStrategy, config)
+	jwtProxy := gorvp.NewJwtProxy(&store, tokenStrategy, config)
 	m := negroni.New(jwtProxy)
 	config.SetupRoute(router, m)
 
@@ -215,7 +215,7 @@ func main() {
 }
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
-	jwtClaims, err := gorvp.GetTokenClaims(req)
+	jwtClaims, err := gorvp.GetTokenClaims(&store, req)
 	if err != nil {
 		gorvp.WriteError(rw, err)
 		return
@@ -253,9 +253,10 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	requestClient := ar.GetClient().(gorvp.Client)
+	clientID := requestClient.GetID()
 	grantedScopes := ar.GetGrantedScopes()
 
-	connection, err := store.UpdateConnection(requestClient, jwtClaims.Subject, grantedScopes)
+	connection, err := store.UpdateConnection(clientID, jwtClaims.Subject, grantedScopes)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -305,16 +306,17 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := gorvp.NewSession("", []string{}, "", gorvp.Connection{})
+	session := gorvp.NewSession("", []string{}, "", &gorvp.Connection{})
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
+	clientID := ar.GetClient().GetID()
 
 	username := req.PostForm.Get("username")
-	var connection gorvp.Connection
+	var connection *gorvp.Connection
 	if ar.GetGrantTypes().Exact("password") {
 		ar.GrantScope(oauth2.GetMandatoryScope() + "_password")
-		connection, err = store.UpdateConnection(ar.GetClient().(gorvp.Client), username, ar.GetGrantedScopes())
+		connection, err = store.UpdateConnection(clientID, username, ar.GetGrantedScopes())
 		if err != nil {
 			gorvp.WriteError(rw, err)
 			return
@@ -325,7 +327,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 			gorvp.WriteError(rw, err)
 			return
 		}
-		connection, err = store.GetConnection(ar.GetClient().(gorvp.Client), username)
+		connection, err = store.GetConnection(clientID, username)
 		if err != nil {
 			gorvp.WriteError(rw, err)
 			return

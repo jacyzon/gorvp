@@ -3,7 +3,6 @@ package gorvp
 import (
 	"net/http"
 	"github.com/ory-am/fosite/handler/core/strategy"
-	"github.com/ory-am/fosite/token/jwt"
 	"strings"
 )
 
@@ -12,14 +11,16 @@ type JwtProxy struct {
 	Separator string
 	Strategy  *strategy.RS256JWTStrategy
 	Config    *Config
+	Store     *Store
 }
 
-func NewJwtProxy(strategy *strategy.RS256JWTStrategy, config *Config) *JwtProxy {
+func NewJwtProxy(store *Store, strategy *strategy.RS256JWTStrategy, config *Config) *JwtProxy {
 	return &JwtProxy{
 		ScopesKey: "sco",
 		Separator: " ",
 		Strategy: strategy,
 		Config: config,
+		Store: store,
 	}
 }
 
@@ -34,40 +35,29 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 			return
 		}
 
-		token, err := GetBearerToken(r)
+		claims, err := GetTokenClaims(jwtp.Store, r)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
-			return
-		}
-		parsedToken, err := jwtp.Strategy.Decode(token)
-		if err != nil {
-			http.Error(rw, "token is not valid", http.StatusForbidden)
+			WriteError(rw, err)
 			return
 		}
 
 		// parse scopes
-		var scopesJWT []string
-		jwtClaims := jwt.JWTClaimsFromMap(parsedToken.Claims)
-		scopesInterface := jwtClaims.Extra[jwtp.ScopesKey]
-
-		switch scopesInterface.(type) {
-		case string:
-			scopesJWT = strings.Split(scopesInterface.(string), jwtp.Separator)
-		}
+		var scopesSlice []string
+		scopeString := claims.Get(jwtp.ScopesKey).(string)
+		scopesSlice = strings.Split(scopeString, jwtp.Separator)
 
 		// check grant
-		for _, requestScope := range scopesJWT {
+		for _, requestScope := range scopesSlice {
 			grant = checkGrant(scopes, requestScope)
 			if grant {
 				handler.ServeHTTP(rw, r)
 				return
 			}
 		}
-	} else {
-		http.NotFound(rw, r)
+		WriteError(rw, ErrClientPermission)
+		return
 	}
-
-	http.Error(rw, "no permission", http.StatusForbidden)
+	http.NotFound(rw, r)
 }
 
 func GetBearerToken(r *http.Request) (string, error) {

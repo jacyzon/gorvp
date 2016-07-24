@@ -12,7 +12,7 @@ type TokenHandler struct {
 }
 
 func (h *TokenHandler) TokenRevocation(w http.ResponseWriter, r *http.Request) {
-	claims, err := GetTokenClaims(r)
+	claims, err := GetTokenClaims(h.Store, r)
 	if err != nil {
 		WriteError(w, err)
 		return
