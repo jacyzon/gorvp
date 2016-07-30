@@ -149,7 +149,10 @@ func main() {
 		panic("Cannot open database.")
 	}
 
-	store = gorvp.Store{DB: db}
+	store = gorvp.Store{
+		DB: db,
+		MandatoryScope: "gorvp",
+	}
 	store.Migrate()
 	oauth2 = fositeFactory(&store)
 
@@ -194,6 +197,7 @@ func main() {
 		Router:router.PathPrefix("/admin").Subrouter(),
 		Store: &store,
 		Hash: xrequestid.New(16),
+		MandatoryScope: "gorvp",
 	}
 	adminHandler.SetupHandler()
 

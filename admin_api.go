@@ -10,10 +10,11 @@ import (
 )
 
 type AdminHandler struct {
-	Router *mux.Router
-	Routes Routes
-	Store  *Store
-	Hash   *xrequestid.XRequestID
+	Router         *mux.Router
+	Routes         Routes
+	Store          *Store
+	Hash           *xrequestid.XRequestID
+	MandatoryScope string
 }
 
 type Route struct {
@@ -60,6 +61,9 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest);
 		return
 	}
+
+	createClientRequest.Scope.AddMandatoryScope(h.MandatoryScope)
+
 	// TODO appType to grantTypes and ResponseTypes helper
 	// TODO data validation
 

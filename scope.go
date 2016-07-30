@@ -30,6 +30,19 @@ func (s *Scopes) Grant(requestScope string) bool {
 	return checkGrant(scopes, requestScope)
 }
 
+func (s *Scopes) AddMandatoryScope(mandatoryScope string) {
+	shouldAddMandatoryScope := true
+	for _, scope := range *s {
+		if scope.Name == mandatoryScope {
+			shouldAddMandatoryScope = false
+			break
+		}
+	}
+	if shouldAddMandatoryScope {
+		*s = append(*s, Scope{Name: mandatoryScope, Required: true})
+	}
+}
+
 func checkGrant(scopes []string, requestScope string) bool {
 	for _, scope := range scopes {
 		if scope == "" {

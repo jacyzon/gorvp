@@ -11,23 +11,24 @@ import (
 )
 
 type Store struct {
-	DB *gorm.DB
-	OC *OwnerClient
+	DB             *gorm.DB
+	OC             *OwnerClient
+	MandatoryScope string
 }
 
-func (db *Store) Migrate() {
-	db.DB.AutoMigrate(&GoRvpClient{})
-	db.DB.AutoMigrate(&AuthorizeCode{})
-	db.DB.AutoMigrate(&Token{})
-	db.DB.AutoMigrate(&ScopeInfo{})
-	db.DB.AutoMigrate(&ClientRevocation{})
-	db.DB.AutoMigrate(&Connection{})
+func (store *Store) Migrate() {
+	store.DB.AutoMigrate(&GoRvpClient{})
+	store.DB.AutoMigrate(&AuthorizeCode{})
+	store.DB.AutoMigrate(&Token{})
+	store.DB.AutoMigrate(&ScopeInfo{})
+	store.DB.AutoMigrate(&ClientRevocation{})
+	store.DB.AutoMigrate(&Connection{})
 }
 
 // store
-func (db *Store) GetClient(id string) (fosite.Client, error) {
+func (store *Store) GetClient(id string) (fosite.Client, error) {
 	client := &GoRvpClient{}
-	err := db.DB.Where(&GoRvpClient{
+	err := store.DB.Where(&GoRvpClient{
 		ID: id,
 	}).First(&client).Error
 	if err != nil {
@@ -36,9 +37,9 @@ func (db *Store) GetClient(id string) (fosite.Client, error) {
 	return client, nil
 }
 
-func (db *Store) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
+func (store *Store) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
 	dataJSON, _ := json.Marshal(req)
-	err := db.DB.Create(&AuthorizeCode{
+	err := store.DB.Create(&AuthorizeCode{
 		Code: code,
 		DataJSON: string(dataJSON),
 	}).Error
@@ -48,9 +49,9 @@ func (db *Store) CreateAuthorizeCodeSession(_ context.Context, code string, req 
 	return nil
 }
 
-func (db *Store) GetAuthorizeCodeSession(_ context.Context, code string, _ interface{}) (fosite.Requester, error) {
+func (store *Store) GetAuthorizeCodeSession(_ context.Context, code string, _ interface{}) (fosite.Requester, error) {
 	var dataJSON string
-	err := db.DB.Where(&AuthorizeCode{Code: code }).First(dataJSON).Error
+	err := store.DB.Where(&AuthorizeCode{Code: code }).First(dataJSON).Error
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
@@ -59,19 +60,19 @@ func (db *Store) GetAuthorizeCodeSession(_ context.Context, code string, _ inter
 	return req, nil
 }
 
-func (db *Store) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
+func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
 	authorizeCode := AuthorizeCode{Code:code}
-	err := db.DB.Delete(&authorizeCode).Error
+	err := store.DB.Delete(&authorizeCode).Error
 	if err != nil {
 		return fosite.ErrNotFound
 	}
 	return nil
 }
 
-func (db *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) error {
+func (store *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) error {
 	dataJSON, _ := json.Marshal(req)
 	session := req.GetSession().(*Session)
-	err := db.DB.Create(&Token{
+	err := store.DB.Create(&Token{
 		ID: session.JWTClaims.JTI,
 		Signature: signature,
 		DataJSON: string(dataJSON),
@@ -85,9 +86,9 @@ func (db *Store) CreateTokenSession(_ context.Context, signature string, req fos
 	return nil
 }
 
-func (db *Store) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
+func (store *Store) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
 	var dataJSON string
-	err := db.DB.Where(&Token{Signature: signature}).First(dataJSON).Error
+	err := store.DB.Where(&Token{Signature: signature}).First(dataJSON).Error
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
@@ -96,73 +97,73 @@ func (db *Store) GetTokenSession(_ context.Context, signature string, _ interfac
 	return req, nil
 }
 
-func (db *Store) DeleteTokenSession(_ context.Context, signature string) error {
+func (store *Store) DeleteTokenSession(_ context.Context, signature string) error {
 	token := Token{Signature: signature}
-	err := db.DB.Delete(&token).Error
+	err := store.DB.Delete(&token).Error
 	if err != nil {
 		return fosite.ErrNotFound
 	}
 	return nil
 }
 
-func (db *Store) CreateAccessTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
-	return db.CreateTokenSession(ctx, signature, req, false)
+func (store *Store) CreateAccessTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
+	return store.CreateTokenSession(ctx, signature, req, false)
 }
 
-func (db *Store) GetAccessTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
-	return db.GetTokenSession(ctx, signature, s)
+func (store *Store) GetAccessTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+	return store.GetTokenSession(ctx, signature, s)
 }
 
-func (db *Store) DeleteAccessTokenSession(ctx context.Context, signature string) error {
-	return db.DeleteTokenSession(ctx, signature)
+func (store *Store) DeleteAccessTokenSession(ctx context.Context, signature string) error {
+	return store.DeleteTokenSession(ctx, signature)
 }
 
-func (db *Store) CreateRefreshTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
-	return db.CreateTokenSession(ctx, signature, req, true)
+func (store *Store) CreateRefreshTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
+	return store.CreateTokenSession(ctx, signature, req, true)
 }
 
-func (db *Store) GetRefreshTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
-	return db.GetTokenSession(ctx, signature, s)
+func (store *Store) GetRefreshTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+	return store.GetTokenSession(ctx, signature, s)
 }
 
-func (db *Store) DeleteRefreshTokenSession(ctx context.Context, signature string) error {
-	return db.DeleteTokenSession(ctx, signature)
+func (store *Store) DeleteRefreshTokenSession(ctx context.Context, signature string) error {
+	return store.DeleteTokenSession(ctx, signature)
 }
 
-func (db *Store) CreateImplicitAccessTokenSession(ctx context.Context, code string, req fosite.Requester) error {
-	return db.CreateTokenSession(ctx, code, req, false)
+func (store *Store) CreateImplicitAccessTokenSession(ctx context.Context, code string, req fosite.Requester) error {
+	return store.CreateTokenSession(ctx, code, req, false)
 }
 
-func (db *Store) Authenticate(ctx context.Context, name string, secret string) error {
-	return db.OC.Authenticate(ctx, name, secret)
+func (store *Store) Authenticate(ctx context.Context, name string, secret string) error {
+	return store.OC.Authenticate(ctx, name, secret)
 }
 
-func (db *Store) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCode, accessSignature, refreshSignature string, request fosite.Requester) error {
-	if err := db.DeleteAuthorizeCodeSession(ctx, authorizeCode); err != nil {
+func (store *Store) PersistAuthorizeCodeGrantSession(ctx context.Context, authorizeCode, accessSignature, refreshSignature string, request fosite.Requester) error {
+	if err := store.DeleteAuthorizeCodeSession(ctx, authorizeCode); err != nil {
 		return err
-	} else if err := db.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
+	} else if err := store.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
 		return err
-	} else if err := db.CreateRefreshTokenSession(ctx, refreshSignature, request); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (db *Store) PersistRefreshTokenGrantSession(ctx context.Context, originalRefreshSignature, accessSignature, refreshSignature string, request fosite.Requester) error {
-	if err := db.DeleteRefreshTokenSession(ctx, originalRefreshSignature); err != nil {
-		return err
-	} else if err := db.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
-		return err
-	} else if err := db.CreateRefreshTokenSession(ctx, refreshSignature, request); err != nil {
+	} else if err := store.CreateRefreshTokenSession(ctx, refreshSignature, request); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (db *Store) CreateTrustedClient(clientName string) (id string, secret string, err error) {
+func (store *Store) PersistRefreshTokenGrantSession(ctx context.Context, originalRefreshSignature, accessSignature, refreshSignature string, request fosite.Requester) error {
+	if err := store.DeleteRefreshTokenSession(ctx, originalRefreshSignature); err != nil {
+		return err
+	} else if err := store.CreateAccessTokenSession(ctx, accessSignature, request); err != nil {
+		return err
+	} else if err := store.CreateRefreshTokenSession(ctx, refreshSignature, request); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store *Store) CreateTrustedClient(clientName string) (id string, secret string, err error) {
 	// create one if not exist, or override the first created one
 	client := &GoRvpClient{}
-	err = db.DB.Where(&GoRvpClient{
+	err = store.DB.Where(&GoRvpClient{
 		AppType: AppTypeOwner,
 		Trusted: true,
 	}).Order("created_at").First(&client).Error
@@ -178,12 +179,15 @@ func (db *Store) CreateTrustedClient(clientName string) (id string, secret strin
 		client.Trusted = true
 		client.Secret = secretString
 		client.Name = clientName
+		client.Scopes.AddMandatoryScope(store.MandatoryScope)
+		scopeJson, _ := json.Marshal(client.Scopes)
+		client.ScopesJSON = string(scopeJson)
 
 		if err == gorm.ErrRecordNotFound {
 			client.ID = uuid.New()
-			db.DB.Create(&client)
+			store.DB.Create(&client)
 		} else if err == nil {
-			db.DB.Model(&client).Update(&client)
+			store.DB.Model(&client).Update(&client)
 		}
 
 		return client.ID, secret, nil
@@ -192,7 +196,7 @@ func (db *Store) CreateTrustedClient(clientName string) (id string, secret strin
 	return "", "", err
 }
 
-func (db *Store) CreateScopeInfo(config *Config) {
+func (store *Store) CreateScopeInfo(config *Config) {
 	scopes := make(map[string]bool)
 	for _, backend := range config.Backend {
 		for _, backendConfig := range backend {
@@ -210,14 +214,14 @@ func (db *Store) CreateScopeInfo(config *Config) {
 			DisplayName: scopeName,
 			Description: "",
 		}
-		db.DB.FirstOrCreate(scopeInfo)
+		store.DB.FirstOrCreate(scopeInfo)
 	}
 }
 
-func (db *Store) GetConnectionByID(connectionID string) (*Connection, error) {
+func (store *Store) GetConnectionByID(connectionID string) (*Connection, error) {
 	connection := &Connection{ID: connectionID}
 
-	err := db.DB.Find(connection).Error
+	err := store.DB.Find(connection).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrRecordNotFound
@@ -227,13 +231,13 @@ func (db *Store) GetConnectionByID(connectionID string) (*Connection, error) {
 	return connection, nil
 }
 
-func (db *Store) GetConnection(clientID string, userID string) (*Connection, error) {
+func (store *Store) GetConnection(clientID string, userID string) (*Connection, error) {
 	connection := &Connection{
 		UserID: userID,
 		ClientID: clientID,
 	}
 
-	err := db.DB.Where(connection).Find(connection).Error
+	err := store.DB.Where(connection).Find(connection).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, ErrRecordNotFound
@@ -243,22 +247,22 @@ func (db *Store) GetConnection(clientID string, userID string) (*Connection, err
 	return connection, nil
 }
 
-func (db *Store) UpdateConnection(clientID string, userID string, scopes []string) (*Connection, error) {
+func (store *Store) UpdateConnection(clientID string, userID string, scopes []string) (*Connection, error) {
 	connection := &Connection{
 		UserID: userID,
 		ClientID: clientID,
 	}
 
-	err := db.DB.Where(connection).Find(&connection).Error
+	err := store.DB.Where(connection).Find(&connection).Error
 	// connection found
 	if err == nil {
 		connection.ScopeString = connection.MergeScope(scopes)
-		db.DB.Model(connection).Update(connection)
+		store.DB.Model(connection).Update(connection)
 	} else {
 		if err == gorm.ErrRecordNotFound {
 			connection.ID = uuid.New()
 			connection.ScopeString = connection.MergeScope(scopes)
-			db.DB.Create(connection)
+			store.DB.Create(connection)
 		} else {
 			return nil, ErrDatabase
 		}
