@@ -92,9 +92,11 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 	// This handler is responsible for the implicit flow. The implicit flow does not return an authorize code
 	// but instead returns the access token directly via an url fragment.
 	implicitHandler := &implicit.AuthorizeImplicitGrantTypeHandler{
-		AccessTokenStrategy: tokenStrategy,
-		AccessTokenStorage:  store,
-		AccessTokenLifespan: accessTokenLifespan,
+		AccessTokenStrategy:      tokenStrategy,
+		RefreshTokenStrategy:     tokenStrategy,
+		AccessTokenStorage:       store,
+		AccessTokenLifespan:      accessTokenLifespan,
+		RefreshTokenGrantStorage: store,
 	}
 	f.AuthorizeEndpointHandlers.Append(implicitHandler)
 
@@ -145,6 +147,7 @@ func main() {
 	gorvp.SetTokenStrategy(tokenStrategy)
 
 	db, err := gorm.Open("sqlite3", "/tmp/gorm.db")
+	db.LogMode(true)
 	if err != nil {
 		panic("Cannot open database.")
 	}
@@ -225,7 +228,7 @@ func main() {
 }
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
-	jwtClaims, err := gorvp.GetTokenClaims(&store, req)
+	jwtClaims, _, err := gorvp.GetTokenClaimsFromBearer(&store, req)
 	if err != nil {
 		gorvp.WriteError(rw, err)
 		return
@@ -279,6 +282,11 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
 	// to support open id connect.
 	response, err := oauth2.NewAuthorizeResponse(ctx, req, ar, session)
+	if err != nil {
+		log.Printf("Error occurred in NewAuthorizeResponse: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
+		oauth2.WriteAuthorizeError(rw, ar, err)
+		return
+	}
 
 	// check app type and relevant check
 	validClient := true
@@ -297,16 +305,6 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// Catch any errors, e.g.:
-	// * unknown client
-	// * invalid redirect
-	// * ...
-	if err != nil {
-		log.Printf("Error occurred in NewAuthorizeResponse: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
-		oauth2.WriteAuthorizeError(rw, ar, err)
-		return
-	}
-
 	// Last but not least, send the response!
 	oauth2.WriteAuthorizeResponse(rw, ar, response)
 }
@@ -320,42 +318,47 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
-	clientID := ar.GetClient().GetID()
 
-	username := req.PostForm.Get("username")
-	var connection *gorvp.Connection
-	if ar.GetGrantTypes().Exact("password") {
-		ar.GrantScope(oauth2.GetMandatoryScope() + "_password")
-		connection, err = store.UpdateConnection(clientID, username, ar.GetGrantedScopes())
-		if err != nil {
-			gorvp.WriteError(rw, err)
-			return
-		}
-	} else {
-		err = gorvp.GrantScope(oauth2, ar)
-		if err != nil {
-			gorvp.WriteError(rw, err)
-			return
-		}
-		connection, err = store.GetConnection(clientID, username)
-		if err != nil {
-			gorvp.WriteError(rw, err)
-			return
-		}
-	}
-	session.JWTClaims.Audience = ar.GetClient().GetID()
-	session.JWTClaims.Subject = username
-	session.SetScopes(ar.GetGrantedScopes())
-	session.SetConnection(connection)
-
-	// Catch any errors, e.g.:
-	// * unknown client
-	// * invalid redirect
-	// * ...
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %s\nStack: \n%s", err, err.(stackTracer).StackTrace())
 		oauth2.WriteAccessError(rw, ar, err)
 		return
+	}
+
+	// TODO refactoring
+	if ar.GetGrantTypes().Exact("password") {
+		clientID := ar.GetClient().GetID()
+		username := req.PostForm.Get("username")
+		ar.GrantScope("password")
+		connection, err := store.UpdateConnection(clientID, username, ar.GetGrantedScopes())
+		if err != nil {
+			gorvp.WriteError(rw, err)
+			return
+		}
+		session.SetScopes(ar.GetGrantedScopes())
+		session.JWTClaims.Audience = clientID
+		session.JWTClaims.Subject = username
+		session.SetConnection(connection)
+	} else if ar.GetGrantTypes().Exact("authorization_code") {
+		claims, connection, err := gorvp.GetTokenClaimsFromCode(&store, req)
+		if err != nil {
+			gorvp.WriteError(rw, err)
+			return
+		}
+		session.CopyScopeFromClaims(claims)
+		session.JWTClaims.Audience = claims.Audience
+		session.JWTClaims.Subject = claims.Subject
+		session.SetConnection(connection)
+	} else if ar.GetGrantTypes().Exact("refresh_token") {
+		claims, connection, err := gorvp.GetTokenClaimsFromRefreshToken(&store, req)
+		if err != nil {
+			gorvp.WriteError(rw, err)
+			return
+		}
+		session.CopyScopeFromClaims(claims)
+		session.JWTClaims.Audience = claims.Audience
+		session.JWTClaims.Subject = claims.Subject
+		session.SetConnection(connection)
 	}
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers

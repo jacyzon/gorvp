@@ -8,15 +8,19 @@ import (
 )
 
 type AuthorizeCode struct {
-	gorm.Model
-	Code     string `gorm:"index"`
-	DataJSON string `gorm:"size:4095"`
+	Signature string `gorm:"primary_key"`
+	DataJSON  string `gorm:"size:4095"`
+
+	UserID    string `gorm:"index"`
+	ClientID  string `gorm:"index"`
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time `sql:"index"`
 }
 
 type Token struct {
-	ID           string `gorm:"primary_key"`
-
-	Signature    string `gorm:"index"`
+	Signature    string `gorm:"primary_key"`
 	DataJSON     string `gorm:"size:4095"`
 
 	UserID       string `gorm:"index"`
@@ -34,31 +38,73 @@ type ClientRevocation struct {
 	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
 }
 
-func GetTokenClaims(store *Store, r *http.Request) (*jwt.JWTClaims, error) {
-	// get token
+func GetTokenClaimsFromCode(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
+	token := r.PostForm.Get("code")
+	if token == "" {
+		return nil, nil, ErrTokenNotFound
+	}
+	return getCodeClaims(store, token)
+}
+
+func GetTokenClaimsFromRefreshToken(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
+	token := r.PostForm.Get("refresh_token")
+	if token == "" {
+		return nil, nil, ErrTokenNotFound
+	}
+	return getTokenClaims(store, token)
+}
+
+func GetTokenClaimsFromBearer(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
 	token, err := GetBearerToken(r)
 	if err != nil {
-		return nil, ErrTokenNotFound
+		return nil, nil, ErrTokenNotFound
 	}
+	return getTokenClaims(store, token)
+}
+
+func getCodeClaims(store *Store, token string) (*jwt.JWTClaims, *Connection, error) {
 	// parse token
 	parsedToken, err := GetTokenStrategy().Decode(token)
 	if err != nil {
-		return nil, ErrTokenInvalid
+		return nil, nil, ErrTokenInvalid
 	}
-	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
 
 	// check token
-	tokenToFind := &Token{ID: claims.JTI}
-	err = store.DB.First(tokenToFind).Error
+	_, err = store.GetAuthorizeCode(parsedToken.Signature)
 	if err != nil {
-		return nil, ErrTokenInvalid
+		return nil, nil, ErrTokenInvalid
 	}
 
 	// check connection
-	_, err = store.GetConnectionByID(claims.Get("cni").(string))
+	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+	connection, err := store.GetConnectionByID(claims.Get("cni").(string))
 	if err != nil {
-		return nil, ErrTokenInvalid
+		return nil, nil, ErrTokenInvalid
 	}
 
-	return claims, nil
+	return claims, connection, nil
 }
+
+func getTokenClaims(store *Store, token string) (*jwt.JWTClaims, *Connection, error) {
+	// parse token
+	parsedToken, err := GetTokenStrategy().Decode(token)
+	if err != nil {
+		return nil, nil, ErrTokenInvalid
+	}
+
+	// check token
+	_, err = store.GetToken(parsedToken.Signature)
+	if err != nil {
+		return nil, nil, ErrTokenInvalid
+	}
+
+	// check connection
+	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+	connection, err := store.GetConnectionByID(claims.Get("cni").(string))
+	if err != nil {
+		return nil, nil, ErrTokenInvalid
+	}
+
+	return claims, connection, nil
+}
+

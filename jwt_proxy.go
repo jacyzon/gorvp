@@ -35,7 +35,7 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 			return
 		}
 
-		claims, err := GetTokenClaims(jwtp.Store, r)
+		claims, _, err := GetTokenClaimsFromBearer(jwtp.Store, r)
 		if err != nil {
 			WriteError(rw, err)
 			return

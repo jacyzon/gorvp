@@ -16,7 +16,7 @@
             "comment": "public endpoint",
             "scopes": [
                 "gorvp",
-                "gorvp_password"
+                "password"
             ]
         },
         "/v1/foo": {
@@ -27,7 +27,7 @@
             ],
             "scopes": [
                 "foo",
-                "gorvp_password"
+                "password"
             ]
         },
         "/v1/ping": {
@@ -38,7 +38,7 @@
             ],
             "scopes": [
                 "ping",
-                "gorvp_password"
+                "password"
             ]
         },
         "*": {

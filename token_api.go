@@ -12,14 +12,14 @@ type TokenHandler struct {
 }
 
 func (h *TokenHandler) TokenRevocation(w http.ResponseWriter, r *http.Request) {
-	claims, err := GetTokenClaims(h.Store, r)
+	claims, _, err := GetTokenClaimsFromBearer(h.Store, r)
 	if err != nil {
 		WriteError(w, err)
 		return
 	}
-	tokenIdToDelete := mux.Vars(r)["id"]
+	tokenSignatureToDelete := mux.Vars(r)["signature"]
 	tokenOwner := claims.Subject
-	tokenToDelete := &Token{ID: tokenIdToDelete}
+	tokenToDelete := &Token{Signature: tokenSignatureToDelete}
 
 	// find the token to delete
 	err = h.Store.DB.First(tokenToDelete).Error
@@ -49,7 +49,7 @@ func (h *TokenHandler) SetupHandler() {
 		Route{
 			"Revocate token",
 			"DELETE",
-			"/{id}",
+			"/{signature}",
 			h.TokenRevocation,
 		},
 	}

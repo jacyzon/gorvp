@@ -5,7 +5,6 @@ import (
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
-	"github.com/pborman/uuid"
 	"strings"
 )
 
@@ -19,7 +18,6 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string, connect
 	session := &Session{
 		JWTSession: &strategy.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
-				JTI:       uuid.New(),
 				Issuer:    "https://api.gorvp.dev", // TODO move into config
 				Subject:   userID,
 				Audience:  clientID,
@@ -37,6 +35,10 @@ func NewSession(userID string, scopes fosite.Arguments, clientID string, connect
 	return session
 }
 
+func (s *Session) CopyScopeFromClaims(claims *jwt.JWTClaims) {
+	s.JWTClaims.Add("sco", claims.Get("sco"))
+}
+
 func (s *Session) SetScopes(scopes fosite.Arguments) {
 	s.JWTClaims.Add("sco", strings.Join(scopes, s.ScopeSeparator))
 }
@@ -46,7 +48,7 @@ func (s *Session) SetConnection(connection *Connection) {
 }
 
 func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
-	requestClient := ar.GetClient().(Client)
+	requestClient := ar.GetClient()
 	clientScopes := requestClient.GetGrantedScopes()
 
 	for _, requestScope := range ar.GetScopes() {

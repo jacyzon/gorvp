@@ -27,21 +27,22 @@ func (store *Store) Migrate() {
 
 // store
 func (store *Store) GetClient(id string) (fosite.Client, error) {
-	client := &GoRvpClient{}
-	err := store.DB.Where(&GoRvpClient{
-		ID: id,
-	}).First(&client).Error
+	client := &GoRvpClient{ID: id}
+	err := store.DB.Find(client).Error
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
 	return client, nil
 }
 
-func (store *Store) CreateAuthorizeCodeSession(_ context.Context, code string, req fosite.Requester) error {
+func (store *Store) CreateAuthorizeCodeSession(_ context.Context, signature string, req fosite.Requester) error {
 	dataJSON, _ := json.Marshal(req)
+	session := req.GetSession().(*Session)
 	err := store.DB.Create(&AuthorizeCode{
-		Code: code,
+		Signature: signature,
 		DataJSON: string(dataJSON),
+		ClientID: req.GetClient().GetID(),
+		UserID: session.JWTClaims.Subject,
 	}).Error
 	if err != nil {
 		return fosite.ErrServerError
@@ -49,57 +50,81 @@ func (store *Store) CreateAuthorizeCodeSession(_ context.Context, code string, r
 	return nil
 }
 
-func (store *Store) GetAuthorizeCodeSession(_ context.Context, code string, _ interface{}) (fosite.Requester, error) {
-	var dataJSON string
-	err := store.DB.Where(&AuthorizeCode{Code: code }).First(dataJSON).Error
+func (store *Store) GetAuthorizeCode(signature string) (*AuthorizeCode, error) {
+	code := &AuthorizeCode{Signature: signature}
+	err := store.DB.Find(code).Error
+	if err != nil {
+		return nil, err
+	}
+	return code, nil
+}
+
+func (store *Store) GetAuthorizeCodeSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
+	token, err := store.GetAuthorizeCode(signature)
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
-	req := &fosite.Request{}
-	json.Unmarshal([]byte(dataJSON), &req)
+	req := &fosite.Request{
+		Client: &GoRvpClient{},
+		Session: &Session{},
+	}
+	json.Unmarshal([]byte(token.DataJSON), req)
 	return req, nil
 }
 
-func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, code string) error {
-	authorizeCode := AuthorizeCode{Code:code}
-	err := store.DB.Delete(&authorizeCode).Error
+func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, signature string) error {
+	authorizeCode := &AuthorizeCode{Signature: signature}
+	err := store.DB.Delete(authorizeCode).Error
 	if err != nil {
 		return fosite.ErrNotFound
 	}
 	return nil
 }
 
-func (store *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) error {
+func (store *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) (err error) {
 	dataJSON, _ := json.Marshal(req)
 	session := req.GetSession().(*Session)
-	err := store.DB.Create(&Token{
-		ID: session.JWTClaims.JTI,
+
+	token := &Token{
 		Signature: signature,
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
-		UserID: req.GetRequestForm().Get("username"), // TODO or token subject
+		UserID: session.JWTClaims.Subject,
 		RefreshToken: refreshToken,
-	}).Error
+	}
+	err = store.DB.Create(token).Error
+
 	if err != nil {
 		return fosite.ErrServerError
 	}
 	return nil
 }
 
+func (store *Store) GetToken(signature string) (*Token, error) {
+	token := &Token{Signature: signature}
+	err := store.DB.Find(token).Error
+	if err != nil {
+		return nil, err
+	}
+	return token, nil
+}
+
 func (store *Store) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
-	var dataJSON string
-	err := store.DB.Where(&Token{Signature: signature}).First(dataJSON).Error
+	token, err := store.GetToken(signature)
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
-	req := &fosite.Request{}
-	json.Unmarshal([]byte(dataJSON), &req)
+	req := &fosite.Request{
+		Client: &GoRvpClient{},
+		Session: &Session{},
+	}
+	json.Unmarshal([]byte(token.DataJSON), &req)
 	return req, nil
 }
 
 func (store *Store) DeleteTokenSession(_ context.Context, signature string) error {
-	token := Token{Signature: signature}
-	err := store.DB.Delete(&token).Error
+	token := &Token{Signature: signature}
+	err := store.DB.Delete(token).Error
 	if err != nil {
 		return fosite.ErrNotFound
 	}
@@ -119,6 +144,10 @@ func (store *Store) DeleteAccessTokenSession(ctx context.Context, signature stri
 }
 
 func (store *Store) CreateRefreshTokenSession(ctx context.Context, signature string, req fosite.Requester) error {
+	if signature == "" {
+		// no refresh token was generated, the scope of this session is not an 'offline' type
+		return nil
+	}
 	return store.CreateTokenSession(ctx, signature, req, true)
 }
 

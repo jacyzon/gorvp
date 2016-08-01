@@ -9,6 +9,8 @@ import (
 var (
 	ErrTokenInvalid = errors.New("Token invalid")
 	ErrTokenNotFound = errors.New("Authorization header format must be bearer token")
+	ErrTokenNotFoundCode = errors.New("Token not found in the post form, name: token")
+	ErrTokenNotFoundRefreshToken = errors.New("Token not found in the post form, name: refresh_token")
 	ErrPermissionDenied = errors.New("You do not have permission on request resource")
 	ErrRecordNotFound = errors.New("Record not found")
 	ErrDatabase = errors.New("Database error")
@@ -34,6 +36,18 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 		return &GoRvpError{
 			Name:        "token_not_found",
 			Description: ErrTokenNotFound.Error(),
+			StatusCode:  http.StatusBadRequest,
+		}
+	case ErrTokenNotFoundCode:
+		return &GoRvpError{
+			Name:        "token_not_found",
+			Description: ErrTokenNotFoundCode.Error(),
+			StatusCode:  http.StatusBadRequest,
+		}
+	case ErrTokenNotFoundRefreshToken:
+		return &GoRvpError{
+			Name:        "token_not_found",
+			Description: ErrTokenNotFoundRefreshToken.Error(),
 			StatusCode:  http.StatusBadRequest,
 		}
 	case ErrPermissionDenied:

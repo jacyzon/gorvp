@@ -93,13 +93,13 @@ func (c *GoRvpClient) GetGrantTypes() fosite.Arguments {
 	// TODO refactoring
 	switch c.AppType {
 	case AppTypeWebBackend:
-		return []string{"authorization_code"}
+		return []string{"authorization_code", "refresh_token"}
 	case AppTypeWebApp:
 		return []string{"implicit"}
 	case AppTypeAndroid:
-		return []string{"implicit"}
+		return []string{"implicit", "refresh_token"}
 	case AppTypeIos:
-		return []string{"implicit"}
+		return []string{"implicit", "refresh_token"}
 	case AppTypeOwner:
 		return []string{"password"}
 	}

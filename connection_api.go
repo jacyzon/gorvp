@@ -19,7 +19,7 @@ type ConnectionResponse struct {
 }
 
 func (h *ConnectionHandler) GetApplications(w http.ResponseWriter, r *http.Request) {
-	claims, err := GetTokenClaims(h.Store, r)
+	claims, _, err := GetTokenClaimsFromBearer(h.Store, r)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -62,7 +62,7 @@ func (h *ConnectionHandler) GetApplications(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ConnectionHandler) RevokeApplication(w http.ResponseWriter, r *http.Request) {
-	claims, err := GetTokenClaims(h.Store, r)
+	claims, _, err := GetTokenClaimsFromBearer(h.Store, r)
 	if err != nil {
 		WriteError(w, err)
 		return
