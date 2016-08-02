@@ -21,7 +21,7 @@ var (
 type GoRvpError struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	StatusCode  int    `json:"statusCode"`
+	StatusCode  int    `json:"status_code"`
 }
 
 func ErrorToHttpResponse(err error) *GoRvpError {

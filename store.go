@@ -234,6 +234,7 @@ func (store *Store) CreateScopeInfo(config *Config) {
 			}
 		}
 	}
+	scopes["offline"] = true
 
 	for scopeName, _ := range scopes {
 		// TODO gorm not yet supports batch insert

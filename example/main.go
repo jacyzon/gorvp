@@ -79,8 +79,6 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 		RefreshTokenStrategy:      tokenStrategy,
 		AuthorizeCodeStrategy:     tokenStrategy,
 		AuthorizeCodeGrantStorage: store,
-		AuthCodeLifespan:          time.Minute * 10,
-		AccessTokenLifespan:       accessTokenLifespan,
 	}
 	// In order to "activate" the handler, we need to add it to fosite
 	f.AuthorizeEndpointHandlers.Append(explicitHandler)
@@ -95,7 +93,6 @@ func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
 		AccessTokenStrategy:      tokenStrategy,
 		RefreshTokenStrategy:     tokenStrategy,
 		AccessTokenStorage:       store,
-		AccessTokenLifespan:      accessTokenLifespan,
 		RefreshTokenGrantStorage: store,
 	}
 	f.AuthorizeEndpointHandlers.Append(implicitHandler)
@@ -316,6 +313,27 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Create an empty session object which will be passed to the request handlers
 	session := gorvp.NewSession("", []string{}, "", &gorvp.Connection{})
 
+	// TODO refactoring
+	req.ParseForm()
+	grantType := req.PostForm.Get("grant_type")
+	if grantType == "refresh_token" {
+		_, _, ok := req.BasicAuth()
+		if !ok {
+			claims, connection, err := gorvp.GetTokenClaimsFromRefreshToken(&store, req)
+			if err != nil {
+				gorvp.WriteError(rw, err)
+				return
+			}
+			// bypass client check if the app type of client is android or ios
+			req.SetBasicAuth(claims.Audience, "0c931a6eecc26f13eba386cd92dae809")
+
+			session.CopyScopeFromClaims(claims)
+			session.JWTClaims.Audience = claims.Audience
+			session.JWTClaims.Subject = claims.Subject
+			session.SetConnection(connection)
+		}
+	}
+
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	ar, err := oauth2.NewAccessRequest(ctx, req, session)
 
@@ -341,16 +359,6 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 		session.SetConnection(connection)
 	} else if ar.GetGrantTypes().Exact("authorization_code") {
 		claims, connection, err := gorvp.GetTokenClaimsFromCode(&store, req)
-		if err != nil {
-			gorvp.WriteError(rw, err)
-			return
-		}
-		session.CopyScopeFromClaims(claims)
-		session.JWTClaims.Audience = claims.Audience
-		session.JWTClaims.Subject = claims.Subject
-		session.SetConnection(connection)
-	} else if ar.GetGrantTypes().Exact("refresh_token") {
-		claims, connection, err := gorvp.GetTokenClaimsFromRefreshToken(&store, req)
 		if err != nil {
 			gorvp.WriteError(rw, err)
 			return

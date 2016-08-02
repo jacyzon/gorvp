@@ -81,6 +81,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		Name:    createClientRequest.Name,
 		AppType: createClientRequest.AppType,
 	}
+	var unEncryptedSecret string
 	switch createClientRequest.AppType {
 	case AppTypeWebBackend:
 		client.RedirectURI = createClientRequest.RedirectURI
@@ -92,9 +93,13 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		client.StartActivity = createClientRequest.StartActivity
 		client.PackageName = createClientRequest.PackageName
 		client.KeyHash = createClientRequest.KeyHash
+		// TODO
+		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
 		break
 	case AppTypeIos:
 		// not implemented yet
+		// TODO
+		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
 		break
 	case AppTypeOwner:
 		client.RedirectURI = createClientRequest.RedirectURI
@@ -113,7 +118,9 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	//client.GrantJSON = string(grantJson)
 
 	// generate client secret
-	unEncryptedSecret, _ := h.Hash.Generate(h.Hash.Size)
+	if unEncryptedSecret == "" {
+		unEncryptedSecret, _ = h.Hash.Generate(h.Hash.Size)
+	}
 	secret, _ := bcrypt.GenerateFromPassword([]byte(unEncryptedSecret), 10)
 	secretString := string(secret)
 	client.Secret = secretString

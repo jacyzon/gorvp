@@ -6,6 +6,7 @@ import (
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
 	"strings"
+	"golang.org/x/net/context"
 )
 
 type Session struct {
@@ -45,6 +46,20 @@ func (s *Session) SetScopes(scopes fosite.Arguments) {
 
 func (s *Session) SetConnection(connection *Connection) {
 	s.JWTClaims.Add("cni", connection.ID)
+}
+
+func (s *Session) GetLifespan(ctx context.Context, requester fosite.Requester, tokenType string) time.Duration {
+	switch tokenType {
+	case "access_token":
+		// 60 day
+		return 60 * 24 * time.Hour
+	case "refresh_token":
+		// 6 months
+		return 6 * 30 * 24 * time.Hour
+	case "authorization_token":
+		return 10 * time.Minute
+	}
+	return time.Hour
 }
 
 func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
