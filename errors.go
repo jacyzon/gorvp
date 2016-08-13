@@ -19,8 +19,8 @@ var (
 )
 
 type GoRvpError struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Type        string `json:"error_type"`
+	Description string `json:"error_description"`
 	StatusCode  int    `json:"status_code"`
 }
 
@@ -28,61 +28,61 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 	switch errors.Cause(err) {
 	case ErrTokenInvalid:
 		return &GoRvpError{
-			Name:        "token_invalid",
+			Type:        "token_invalid",
 			Description: ErrTokenInvalid.Error(),
 			StatusCode:  http.StatusUnauthorized,
 		}
 	case ErrTokenNotFound:
 		return &GoRvpError{
-			Name:        "token_not_found",
+			Type:        "token_not_found",
 			Description: ErrTokenNotFound.Error(),
 			StatusCode:  http.StatusBadRequest,
 		}
 	case ErrTokenNotFoundCode:
 		return &GoRvpError{
-			Name:        "token_not_found",
+			Type:        "token_not_found",
 			Description: ErrTokenNotFoundCode.Error(),
 			StatusCode:  http.StatusBadRequest,
 		}
 	case ErrTokenNotFoundRefreshToken:
 		return &GoRvpError{
-			Name:        "token_not_found",
+			Type:        "token_not_found",
 			Description: ErrTokenNotFoundRefreshToken.Error(),
 			StatusCode:  http.StatusBadRequest,
 		}
 	case ErrPermissionDenied:
 		return &GoRvpError{
-			Name:        "permission_denied",
+			Type:        "permission_denied",
 			Description: ErrPermissionDenied.Error(),
 			StatusCode:  http.StatusForbidden,
 		}
 	case ErrRecordNotFound:
 		return &GoRvpError{
-			Name:        "not_found",
+			Type:        "not_found",
 			Description: ErrRecordNotFound.Error(),
 			StatusCode:  http.StatusNotFound,
 		}
 	case ErrDatabase:
 		return &GoRvpError{
-			Name:        "database_error",
+			Type:        "database_error",
 			Description: ErrDatabase.Error(),
 			StatusCode:  http.StatusInternalServerError,
 		}
 	case ErrClientPermission:
 		return &GoRvpError{
-			Name:        "client_permission",
+			Type:        "client_permission",
 			Description: ErrClientPermission.Error(),
 			StatusCode:  http.StatusForbidden,
 		}
 	case ErrConnectionRevoked:
 		return &GoRvpError{
-			Name:        "connection_revoked",
+			Type:        "connection_revoked",
 			Description: ErrConnectionRevoked.Error(),
 			StatusCode:  http.StatusForbidden,
 		}
 	default:
 		return &GoRvpError{
-			Name:        "unknown_error",
+			Type:        "unknown_error",
 			Description: "unknown error",
 			StatusCode:  http.StatusInternalServerError,
 		}
