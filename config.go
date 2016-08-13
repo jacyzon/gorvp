@@ -2,51 +2,57 @@ package gorvp
 
 import (
 	"io/ioutil"
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
+	"gopkg.in/yaml.v2"
 )
 
-type BackendDocument map[string]map[string]Backend
+type FrontDocument map[string]map[string]Frontend
 
-type Config struct {
-	Backend BackendDocument
+type DatabaseDocument struct {
+	Type       string `yaml:"type"`
+	Connection string `yaml:"connection"`
 }
 
-type Backend struct {
-	Backend string `json:"backend"`
-	Comment string `json:"comment"`
-	Plugins []string `json:"plugins"`
-	Scopes  ConfigScopes `json:"scopes"`
+type RsaKeyDocument struct {
+	Public  string `yaml:"public"`
+	Private string `yaml:"private"`
+}
+
+type Config struct {
+	Frontend FrontDocument    `yaml:"frontend"`
+	Database DatabaseDocument `yaml:"database"`
+	RsaKey   RsaKeyDocument   `yaml:"rsa_key"`
+}
+
+type Frontend struct {
+	Backend string       `yaml:"backend"`
+	Plugins []string     `yaml:"plugins"`
+	Scopes  ConfigScopes `yaml:"scopes"`
 }
 
 type ConfigScopes []string
 
-func read(filename string) (BackendDocument, error) {
-	backendDoc := make(BackendDocument)
-	content, err := ioutil.ReadFile(filename)
+func LoadConfig(configPath string) (config *Config, err error) {
+	config = &Config{}
+	content, err := ioutil.ReadFile(configPath)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(content, &backendDoc)
+	err = yaml.Unmarshal(content, config)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return backendDoc, nil
-}
-
-func (config *Config) Load(backendConfigPath string) {
-	raw, _ := read(backendConfigPath)
-	config.Backend = raw
+	return config, nil
 }
 
 func (config *Config) SetupRoute(router *mux.Router, m *negroni.Negroni) {
-	for _, backend := range config.Backend {
-		for path, _ := range backend {
+	for _, frontend := range config.Frontend {
+		for path, _ := range frontend {
 			router.PathPrefix(path).Handler(m)
 		}
 	}

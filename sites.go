@@ -7,9 +7,9 @@ var sites Sites
 func SetupSites(config *Config) {
 	newSites := make(Sites)
 
-	for hostname, backend := range config.Backend {
+	for hostname, frontend := range config.Frontend {
 		debug("Setting up %s", hostname)
-		newSites[hostname] = handlersOf(backend)
+		newSites[hostname] = handlersOf(frontend)
 	}
 
 	sites = newSites

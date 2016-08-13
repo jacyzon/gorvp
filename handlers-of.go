@@ -8,7 +8,7 @@ import (
 
 type Handlers map[string]*Handler
 
-func handlerOf(backendDoc Backend, hasCustom404 bool, custom404 string) *Handler {
+func handlerOf(backendDoc Frontend, hasCustom404 bool, custom404 string) *Handler {
 	uri := backendDoc.Backend
 	debug("Setting up the HTTP handler that will serve %s", uri)
 
@@ -35,7 +35,7 @@ func handlerOf(backendDoc Backend, hasCustom404 bool, custom404 string) *Handler
 	return handler
 }
 
-func handlersOf(backend map[string]Backend) Handlers {
+func handlersOf(backend map[string]Frontend) Handlers {
 	handlers := make(Handlers)
 
 	backendDoc, hasCustom404 := backend["*"]

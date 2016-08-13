@@ -227,9 +227,9 @@ func (store *Store) CreateTrustedClient(clientName string) (id string, secret st
 
 func (store *Store) CreateScopeInfo(config *Config) {
 	scopes := make(map[string]bool)
-	for _, backend := range config.Backend {
-		for _, backendConfig := range backend {
-			for _, scope := range backendConfig.Scopes {
+	for _, backend := range config.Frontend {
+		for _, frontendConfig := range backend {
+			for _, scope := range frontendConfig.Scopes {
 				scopes[scope] = true
 			}
 		}

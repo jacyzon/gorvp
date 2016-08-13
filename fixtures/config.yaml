@@ -1,0 +1,46 @@
+database:
+  type: mysql
+  connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
+  # type: sqlite3
+  # connection: /tmp/gorvp.db
+
+rsa_key:
+  public: cert/rs256-public.pem
+  private: cert/rs256-private.pem
+
+frontend:
+  api.example.com:
+    /auth:
+      backend: example-auth-v1
+      plugins:
+        - rate-limit
+    /v1/pub:
+      backend: example-foo-v1
+    /v1/semi_pub:
+      backend: example-foo-v1
+      scopes:
+        - gorvp
+        - password
+    /v1/foo:
+      backend: example-foo-v1
+      plugins:
+        - jwt_proxy
+      scopes:
+        - foo
+        - password
+    /v1/ping:
+      backend: example-foo-v1
+      plugins:
+        - jwt_proxy
+      scopes:
+        - ping
+        - password
+    "*":
+      backend: docs.example.com
+      plugins:
+        - jwt_proxy
+  "*":
+    "*":
+      backend: docs.example.com
+      plugins:
+        - jwt_proxy

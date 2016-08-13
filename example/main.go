@@ -10,6 +10,7 @@ import (
 	"github.com/jacyzon/gorvp/example/ident"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/ory-am/fosite"
 	"github.com/ory-am/fosite/hash"
 	"github.com/ory-am/fosite/handler/core"
@@ -137,13 +138,11 @@ var oauth2 fosite.OAuth2Provider
 var store gorvp.Store
 
 func main() {
-	config := &gorvp.Config{}
-	config.Load("../fixtures/backend.json")
+	config, _ := gorvp.LoadConfig("../fixtures/config.yaml")
 	gorvp.SetupSites(config)
-
 	gorvp.SetTokenStrategy(tokenStrategy)
 
-	db, err := gorm.Open("sqlite3", "/tmp/gorm.db")
+	db, err := gorm.Open(config.Database.Type, config.Database.Connection)
 	db.LogMode(true)
 	if err != nil {
 		panic("Cannot open database.")
