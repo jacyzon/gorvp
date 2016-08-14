@@ -5,8 +5,12 @@ database:
   # connection: /tmp/gorvp.db
 
 rsa_key:
-  public: cert/rs256-public.pem
-  private: cert/rs256-private.pem
+  token:
+    public: fixtures/cert/rs256-public.pem
+    private: fixtures/cert/rs256-private.pem
+  proxy:
+    public: fixtures/cert/rs256-public-proxy.pem
+    private: fixtures/cert/rs256-private-proxy.pem
 
 frontend:
   api.example.com:

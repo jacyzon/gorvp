@@ -21,31 +21,13 @@ import (
 	coreclient "github.com/ory-am/fosite/handler/core/client"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite/handler/core/strategy"
-	"crypto/rsa"
-	"crypto/rand"
 	"log"
 	"github.com/pkg/errors"
 	"fmt"
 )
 
-func MustRSAKey() *rsa.PrivateKey {
-	key, err := rsa.GenerateKey(rand.Reader, 1024)
-	if err != nil {
-		panic(err)
-	}
-	return key
-}
-
-var tokenStrategy = &strategy.RS256JWTStrategy{
-	RS256JWTStrategy: &jwt.RS256JWTStrategy{
-		PrivateKey: MustRSAKey(),
-	},
-}
-
-var jwtInternalStrategy = &strategy.RS256JWTStrategy{
-	RS256JWTStrategy: &jwt.RS256JWTStrategy{
-		PrivateKey: MustRSAKey(),
-	},
+var config = &gorvp.Config{
+	ConfigPath: "../fixtures/config.yaml",
 }
 
 type stackTracer interface {
@@ -53,7 +35,7 @@ type stackTracer interface {
 }
 
 // fositeFactory creates a new Fosite instance with all features enabled
-func fositeFactory(store *gorvp.Store) fosite.OAuth2Provider {
+func fositeFactory(store *gorvp.Store, tokenStrategy *strategy.RS256JWTStrategy) fosite.OAuth2Provider {
 	// Instantiate a new fosite instance
 	f := &fosite.Fosite{
 		Store:                       store,
@@ -138,7 +120,21 @@ var oauth2 fosite.OAuth2Provider
 var store gorvp.Store
 
 func main() {
-	config, _ := gorvp.LoadConfig("../fixtures/config.yaml")
+	config.Load()
+	config.GenerateRsaKeyIfNotExist()
+
+	jwtInternalStrategy := &strategy.RS256JWTStrategy{
+		RS256JWTStrategy: &jwt.RS256JWTStrategy{
+			PrivateKey: config.RsaKey.Proxy.Key,
+		},
+	}
+
+	tokenStrategy := &strategy.RS256JWTStrategy{
+		RS256JWTStrategy: &jwt.RS256JWTStrategy{
+			PrivateKey: config.RsaKey.Token.Key,
+		},
+	}
+
 	gorvp.SetupSites(config)
 	gorvp.SetTokenStrategy(tokenStrategy)
 
@@ -153,7 +149,7 @@ func main() {
 		MandatoryScope: "gorvp",
 	}
 	store.Migrate()
-	oauth2 = fositeFactory(&store)
+	oauth2 = fositeFactory(&store, tokenStrategy)
 
 	store.CreateScopeInfo(config)
 

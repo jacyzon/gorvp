@@ -27,7 +27,7 @@ func NewJwtProxy(store *Store, strategy *strategy.RS256JWTStrategy, config *Conf
 func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	handler, found, scopes := matchingServerOf(r.Host, r.URL.String())
 
-	grant := false
+	granted := false
 	if found {
 		// scope not defined
 		if len(scopes) == 0 {
@@ -48,8 +48,8 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 
 		// check grant
 		for _, requestScope := range scopesSlice {
-			grant = checkGrant(scopes, requestScope)
-			if grant {
+			granted = checkGrant(scopes, requestScope)
+			if granted {
 				handler.ServeHTTP(rw, r)
 				return
 			}
