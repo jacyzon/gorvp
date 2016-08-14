@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"github.com/ory-am/fosite/handler/core/strategy"
 	"strings"
+	"github.com/ory-am/fosite/token/jwt"
+	"fmt"
 )
 
 type JwtProxy struct {
@@ -50,6 +52,9 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 		for _, requestScope := range scopesSlice {
 			granted = checkGrant(scopes, requestScope)
 			if granted {
+				token, _ := GetBearerToken(r)
+				r.Header.Add("Token", token)
+				addTokenClaimHeader(claims, r)
 				handler.ServeHTTP(rw, r)
 				return
 			}
@@ -74,3 +79,10 @@ func GetBearerToken(r *http.Request) (string, error) {
 	return authHeaderParts[1], nil
 }
 
+func addTokenClaimHeader(claims *jwt.JWTClaims, r *http.Request) {
+	claimsMap := claims.ToMap()
+	for k, v := range claimsMap {
+		valueString := fmt.Sprint(v)
+		r.Header.Add("Token-Claims-" + k, valueString)
+	}
+}
