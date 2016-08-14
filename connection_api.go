@@ -48,7 +48,7 @@ func (h *ConnectionHandler) GetApplications(w http.ResponseWriter, r *http.Reque
 		cr.Client.Name = c.Client.Name
 		cr.Client.LogoUrl = "" // TODO
 
-		scopes := c.Client.GetGrantedScopes().(*Scopes)
+		scopes := c.Client.GetFullScopes()
 		cr.Client.Scopes = make([]ScopeResponse, len(*scopes))
 		for index, scope := range *scopes {
 			cr.Client.Scopes[index].Name = scope.Name

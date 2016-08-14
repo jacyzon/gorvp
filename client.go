@@ -41,6 +41,7 @@ type GoRvpClient struct {
 
 type Client interface {
 	fosite.Client
+	GetFullScopes() *Scopes
 	GetAppType() string
 	GetPackageName() string
 	GetKeyHash() string
@@ -131,9 +132,20 @@ func (c *GoRvpClient) GetOwner() string {
 }
 
 // Returns the scopes this client was granted.
-func (c *GoRvpClient) GetGrantedScopes() fosite.Scopes {
-	json.Unmarshal([]byte(c.ScopesJSON), &c.Scopes)
+func (c *GoRvpClient) GetScopes() fosite.Arguments {
+	scopes := make(fosite.Arguments, len(c.Scopes))
+	for i, s := range c.Scopes {
+		scopes[i] = s.Name
+	}
+	return scopes
+}
+
+func (c *GoRvpClient) GetFullScopes() *Scopes {
 	return &c.Scopes;
+}
+
+func (c *GoRvpClient) UnmarshalScopesJSON() {
+	json.Unmarshal([]byte(c.ScopesJSON), &c.Scopes)
 }
 
 func (c *GoRvpClient) GetAppType() string {

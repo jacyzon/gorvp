@@ -2,22 +2,28 @@ package gorvp
 
 import (
 	"time"
-	"github.com/ory-am/fosite/handler/core/strategy"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
 	"strings"
 	"golang.org/x/net/context"
+	"github.com/ory-am/fosite/compose"
+	"github.com/ory-am/fosite/handler/openid"
+	core "github.com/ory-am/fosite/handler/oauth2"
 )
 
 type Session struct {
-	*strategy.JWTSession
 	ScopeSeparator string
+	*compose.Config
+	*core.HMACSession
+	*core.JWTSession
+	*openid.DefaultSession
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
+func NewSession(config *compose.Config, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
 	session := &Session{
-		JWTSession: &strategy.JWTSession{
+		Config: config,
+		JWTSession: &core.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
 				Issuer:    "https://api.gorvp.dev", // TODO move into config
 				Subject:   userID,
@@ -64,15 +70,10 @@ func (s *Session) GetLifespan(ctx context.Context, requester fosite.Requester, t
 
 func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
 	requestClient := ar.GetClient()
-	clientScopes := requestClient.GetGrantedScopes()
+	clientScopes := requestClient.GetScopes()
 
-	for _, requestScope := range ar.GetScopes() {
-		if requestScope == oauth2.GetMandatoryScope() {
-			// every client has permission on mandatory scope by default
-			// which is set in access request handler
-			continue
-		}
-		if clientScopes.Grant(requestScope) {
+	for _, requestScope := range ar.GetRequestedScopes() {
+		if clientScopes.Has(requestScope) {
 			ar.GrantScope(requestScope)
 		} else {
 			return ErrPermissionDenied

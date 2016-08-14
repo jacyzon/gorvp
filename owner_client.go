@@ -3,21 +3,21 @@ package gorvp
 import (
 	"golang.org/x/net/context"
 	"net/http"
-	"golang.org/x/oauth2"
 	"encoding/json"
 	"errors"
-	"github.com/ory-am/fosite/handler/core/strategy"
 	"fmt"
 	"github.com/pborman/uuid"
 	"time"
 	"github.com/ory-am/fosite/token/jwt"
+	oauth2 "github.com/ory-am/fosite/handler/oauth2"
 	"net/url"
 	"bytes"
 	"strconv"
+	goauth2 "golang.org/x/oauth2"
 )
 
 type OwnerClient struct {
-	JWTStrategy          *strategy.RS256JWTStrategy
+	JWTStrategy          *oauth2.RS256JWTStrategy
 	IdentityProviderName string
 	ClientID             string
 	ClientSecret         string
@@ -34,13 +34,13 @@ func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 	r.ParseForm()
 
-	conf := oauth2.Config{
+	conf := goauth2.Config{
 		ClientID:     oc.ClientID,
 		ClientSecret: oc.ClientSecret,
 		Scopes:       []string{oc.MandatoryScope},
-		Endpoint:     oauth2.Endpoint{TokenURL: oc.TokenEndpoint},
+		Endpoint:     goauth2.Endpoint{TokenURL: oc.TokenEndpoint},
 	}
-	token, err := conf.PasswordCredentialsToken(oauth2.NoContext,
+	token, err := conf.PasswordCredentialsToken(goauth2.NoContext,
 		r.PostForm.Get("username"), r.PostForm.Get("password"))
 	if err != nil {
 		rw.WriteHeader(http.StatusNotFound)
@@ -97,7 +97,7 @@ func (oc *OwnerClient) needRenew() bool {
 
 func (oc *OwnerClient) renewToken() {
 	// trusted token
-	JWTSession := &strategy.JWTSession{
+	JWTSession := &oauth2.JWTSession{
 		JWTClaims: &jwt.JWTClaims{
 			JTI:       uuid.New(),
 			Issuer:    "inner", // TODO router public key

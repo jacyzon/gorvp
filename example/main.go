@@ -11,22 +11,16 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	core "github.com/ory-am/fosite/handler/oauth2"
 	"github.com/ory-am/fosite"
-	"github.com/ory-am/fosite/hash"
-	"github.com/ory-am/fosite/handler/core"
-	"github.com/ory-am/fosite/handler/core/owner"
-	"github.com/ory-am/fosite/handler/core/refresh"
-	"github.com/ory-am/fosite/handler/core/explicit"
-	"github.com/ory-am/fosite/handler/core/implicit"
-	coreclient "github.com/ory-am/fosite/handler/core/client"
 	"github.com/ory-am/fosite/token/jwt"
-	"github.com/ory-am/fosite/handler/core/strategy"
 	"log"
 	"github.com/pkg/errors"
 	"fmt"
+	"github.com/ory-am/fosite/compose"
 )
 
-var config = &gorvp.Config{
+var gorvpConfig = &gorvp.Config{
 	ConfigPath: "../fixtures/config.yaml",
 }
 
@@ -34,111 +28,34 @@ type stackTracer interface {
 	StackTrace() errors.StackTrace
 }
 
-// fositeFactory creates a new Fosite instance with all features enabled
-func fositeFactory(store *gorvp.Store, tokenStrategy *strategy.RS256JWTStrategy) fosite.OAuth2Provider {
-	// Instantiate a new fosite instance
-	f := &fosite.Fosite{
-		Store:                       store,
-		MandatoryScope:              "gorvp", // TODO - move mandatory scope into config
-		AuthorizeEndpointHandlers:   fosite.AuthorizeEndpointHandlers{},
-		TokenEndpointHandlers:       fosite.TokenEndpointHandlers{},
-		AuthorizedRequestValidators: fosite.AuthorizedRequestValidators{},
-		Hasher: &hash.BCrypt{WorkFactor: 12},
-	}
-
-	// Set the default access token lifespan to one hour
-	accessTokenLifespan := time.Hour
-
-	// Most handlers are composable. This little helper is used by some of the handlers below.
-	oauth2HandleHelper := &core.HandleHelper{
-		AccessTokenStrategy: tokenStrategy,
-		AccessTokenStorage:  store,
-		AccessTokenLifespan: accessTokenLifespan,
-	}
-
-	// This handler is responsible for the authorization code grant flow
-	explicitHandler := &explicit.AuthorizeExplicitGrantTypeHandler{
-		AccessTokenStrategy:       tokenStrategy,
-		RefreshTokenStrategy:      tokenStrategy,
-		AuthorizeCodeStrategy:     tokenStrategy,
-		AuthorizeCodeGrantStorage: store,
-	}
-	// In order to "activate" the handler, we need to add it to fosite
-	f.AuthorizeEndpointHandlers.Append(explicitHandler)
-
-	// Because this handler both handles `/auth` and `/token` endpoint requests, we need to add him to
-	// both registries.
-	f.TokenEndpointHandlers.Append(explicitHandler)
-
-	// This handler is responsible for the implicit flow. The implicit flow does not return an authorize code
-	// but instead returns the access token directly via an url fragment.
-	implicitHandler := &implicit.AuthorizeImplicitGrantTypeHandler{
-		AccessTokenStrategy:      tokenStrategy,
-		RefreshTokenStrategy:     tokenStrategy,
-		AccessTokenStorage:       store,
-		RefreshTokenGrantStorage: store,
-	}
-	f.AuthorizeEndpointHandlers.Append(implicitHandler)
-
-	// This handler is responsible for the client credentials flow. This flow is used when you want to
-	// authorize a client instead of an user.
-	clientHandler := &coreclient.ClientCredentialsGrantHandler{
-		HandleHelper: oauth2HandleHelper,
-	}
-	f.TokenEndpointHandlers.Append(clientHandler)
-
-	// This handler is responsible for the resource owner password credentials grant. In general, this
-	// is a flow which should not be used but could be useful in legacy environments. It uses a
-	// user's credentials (username, password) to issue an access token.
-	ownerHandler := &owner.ResourceOwnerPasswordCredentialsGrantHandler{
-		HandleHelper:                                 oauth2HandleHelper,
-		ResourceOwnerPasswordCredentialsGrantStorage: store,
-	}
-	f.TokenEndpointHandlers.Append(ownerHandler)
-
-	// This handler is responsible for the refresh token grant. This type is used when you want to exchange
-	// a refresh token for a new refresh token and a new access token.
-	refreshHandler := &refresh.RefreshTokenGrantHandler{
-		AccessTokenStrategy:      tokenStrategy,
-		RefreshTokenStrategy:     tokenStrategy,
-		RefreshTokenGrantStorage: store,
-		AccessTokenLifespan:      accessTokenLifespan,
-	}
-	f.TokenEndpointHandlers.Append(refreshHandler)
-
-	// Add a request validator for Access Tokens to fosite
-	f.AuthorizedRequestValidators.Append(&core.CoreValidator{
-		AccessTokenStrategy: tokenStrategy,
-		AccessTokenStorage:  store,
-	})
-
-	return f
-}
-
-// This is our fosite instance
 var oauth2 fosite.OAuth2Provider
 var store gorvp.Store
+var config = &compose.Config{
+	AccessTokenLifespan: time.Hour,
+	RefreshTokenLifespan: time.Hour,
+	AuthorizeCodeLifespan: time.Hour,
+}
 
 func main() {
-	config.Load()
-	config.GenerateRsaKeyIfNotExist()
+	gorvpConfig.Load()
+	gorvpConfig.GenerateRsaKeyIfNotExist()
 
-	jwtInternalStrategy := &strategy.RS256JWTStrategy{
+	jwtInternalStrategy := &core.RS256JWTStrategy{
 		RS256JWTStrategy: &jwt.RS256JWTStrategy{
-			PrivateKey: config.RsaKey.Proxy.Key,
+			PrivateKey: gorvpConfig.RsaKey.Proxy.Key,
 		},
 	}
 
-	tokenStrategy := &strategy.RS256JWTStrategy{
+	tokenStrategy := &core.RS256JWTStrategy{
 		RS256JWTStrategy: &jwt.RS256JWTStrategy{
-			PrivateKey: config.RsaKey.Token.Key,
+			PrivateKey: gorvpConfig.RsaKey.Token.Key,
 		},
 	}
 
-	gorvp.SetupSites(config)
+	gorvp.SetupSites(gorvpConfig)
 	gorvp.SetTokenStrategy(tokenStrategy)
 
-	db, err := gorm.Open(config.Database.Type, config.Database.Connection)
+	db, err := gorm.Open(gorvpConfig.Database.Type, gorvpConfig.Database.Connection)
 	db.LogMode(true)
 	if err != nil {
 		panic("Cannot open database.")
@@ -149,15 +66,26 @@ func main() {
 		MandatoryScope: "gorvp",
 	}
 	store.Migrate()
-	oauth2 = fositeFactory(&store, tokenStrategy)
-
-	store.CreateScopeInfo(config)
-
+	store.CreateScopeInfo(gorvpConfig)
 	id, secret, err := store.CreateTrustedClient("gorvp_api")
 	if err == nil {
 		// TODO log lib
 		fmt.Printf("default trusted api client id: %s, secret: %s\n", id, secret)
 	}
+	oauth2 = compose.Compose(
+		config,
+		&store,
+		&compose.CommonStrategy{
+			// alternatively you could use OAuth2Strategy: compose.NewOAuth2JWTStrategy(mustRSAKey())
+			CoreStrategy: tokenStrategy,
+		},
+		// enabled handlers
+		compose.OAuth2AuthorizeExplicitFactory,
+		compose.OAuth2AuthorizeImplicitFactory,
+		compose.OAuth2ClientCredentialsGrantFactory,
+		compose.OAuth2RefreshTokenGrantFactory,
+		compose.OAuth2ResourceOwnerPasswordCredentialsFactory,
+	)
 	oc := &gorvp.OwnerClient{
 		JWTStrategy:          jwtInternalStrategy,
 		IdentityProviderName: "gorvp_identity_provider",
@@ -183,9 +111,9 @@ func main() {
 	router.HandleFunc("/token", tokenEndpoint)
 
 	// TODO plugins support
-	jwtProxy := gorvp.NewJwtProxy(&store, tokenStrategy, config)
+	jwtProxy := gorvp.NewJwtProxy(&store, tokenStrategy, gorvpConfig)
 	m := negroni.New(jwtProxy)
-	config.SetupRoute(router, m)
+	gorvpConfig.SetupRoute(router, m)
 
 	// admin API
 	adminHandler := gorvp.AdminHandler{
@@ -268,7 +196,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := gorvp.NewSession(jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
+	session := gorvp.NewSession(config, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -306,7 +234,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := gorvp.NewSession("", []string{}, "", &gorvp.Connection{})
+	session := gorvp.NewSession(config, "", []string{}, "", &gorvp.Connection{})
 
 	// TODO refactoring
 	req.ParseForm()
@@ -338,7 +266,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO refactoring
+	// TODO refactoring: select app type
 	if ar.GetGrantTypes().Exact("password") {
 		clientID := ar.GetClient().GetID()
 		username := req.PostForm.Get("username")

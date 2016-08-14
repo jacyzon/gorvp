@@ -1,8 +1,8 @@
 database:
-  type: mysql
-  connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
-  # type: sqlite3
-  # connection: /tmp/gorvp.db
+  type: sqlite3
+  connection: /tmp/gorvp.db
+  # type: mysql
+  # connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
 
 rsa_key:
   token:

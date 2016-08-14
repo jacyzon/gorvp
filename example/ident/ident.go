@@ -2,7 +2,7 @@ package ident
 
 import (
 	"net/http"
-	"github.com/ory-am/fosite/handler/core/strategy"
+	"github.com/ory-am/fosite/handler/oauth2"
 	"github.com/jacyzon/gorvp"
 )
 
@@ -11,7 +11,7 @@ var UserTable = map[string]string{
 }
 
 type IdentityProvider struct {
-	JWTStrategy *strategy.RS256JWTStrategy
+	JWTStrategy *oauth2.RS256JWTStrategy
 }
 
 func (ip *IdentityProvider) ServeHTTP(rw http.ResponseWriter, r *http.Request) {

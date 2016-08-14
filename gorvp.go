@@ -1,16 +1,18 @@
 package gorvp
 
-import "github.com/ory-am/fosite/handler/core/strategy"
+import (
+	"github.com/ory-am/fosite/handler/oauth2"
+)
 
 // TODO move into gorvp struct
 var tokenStrategy = &GoRvpStrategy{init: false}
 
 type GoRvpStrategy struct {
-	*strategy.RS256JWTStrategy
+	*oauth2.RS256JWTStrategy
 	init bool
 }
 
-func SetTokenStrategy(s *strategy.RS256JWTStrategy) {
+func SetTokenStrategy(s *oauth2.RS256JWTStrategy) {
 	tokenStrategy.RS256JWTStrategy = s
 	tokenStrategy.init = true
 }

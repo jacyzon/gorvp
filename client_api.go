@@ -55,8 +55,8 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 	var scopeString []string
 	scopeMapRequired := make(map[string]bool)
 
-	scopes := *client.GetGrantedScopes().(*Scopes)
-	for _, scope := range scopes {
+	scopes := client.(Client).GetFullScopes()
+	for _, scope := range *scopes {
 		scopeString = append(scopeString, scope.Name)
 		scopeMapRequired[scope.Name] = scope.Required
 	}

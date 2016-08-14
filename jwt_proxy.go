@@ -2,21 +2,21 @@ package gorvp
 
 import (
 	"net/http"
-	"github.com/ory-am/fosite/handler/core/strategy"
 	"strings"
 	"github.com/ory-am/fosite/token/jwt"
+	"github.com/ory-am/fosite/handler/oauth2"
 	"fmt"
 )
 
 type JwtProxy struct {
 	ScopesKey string
 	Separator string
-	Strategy  *strategy.RS256JWTStrategy
+	Strategy  *oauth2.RS256JWTStrategy
 	Config    *Config
 	Store     *Store
 }
 
-func NewJwtProxy(store *Store, strategy *strategy.RS256JWTStrategy, config *Config) *JwtProxy {
+func NewJwtProxy(store *Store, strategy *oauth2.RS256JWTStrategy, config *Config) *JwtProxy {
 	return &JwtProxy{
 		ScopesKey: "sco",
 		Separator: " ",

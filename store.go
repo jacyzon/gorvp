@@ -32,6 +32,7 @@ func (store *Store) GetClient(id string) (fosite.Client, error) {
 	if err != nil {
 		return nil, fosite.ErrNotFound
 	}
+	client.UnmarshalScopesJSON()
 	return client, nil
 }
 
