@@ -37,22 +37,22 @@ func GetTokenStrategy() (*GoRvpStrategy) {
 }
 
 type GoRvp struct {
-	Config *Config
-	Router *mux.Router
-	store  *Store
-	oauth2 fosite.OAuth2Provider
-}
-
-var fositeConfig = &compose.Config{
-	AccessTokenLifespan: time.Hour,
-	RefreshTokenLifespan: time.Hour,
-	AuthorizeCodeLifespan: time.Hour,
+	Config       *Config
+	Router       *mux.Router
+	store        *Store
+	oauth2       fosite.OAuth2Provider
+	fositeConfig *compose.Config
 }
 
 func (goRvp *GoRvp) Run() (error) {
 	err := goRvp.Config.Load()
 	if (err != nil) {
 		return err;
+	}
+	goRvp.fositeConfig = &compose.Config{
+		AccessTokenLifespan: goRvp.Config.Lifespan.AccessToken * time.Second,
+		RefreshTokenLifespan: goRvp.Config.Lifespan.RefreshToken * time.Second,
+		AuthorizeCodeLifespan: goRvp.Config.Lifespan.AuthorizeCode * time.Second,
 	}
 
 	jwtInternalStrategy := &oauth2.RS256JWTStrategy{
@@ -88,7 +88,7 @@ func (goRvp *GoRvp) Run() (error) {
 		fmt.Printf("default trusted api client id: %s, secret: %s\n", id, secret)
 	}
 	goRvp.oauth2 = compose.Compose(
-		fositeConfig,
+		goRvp.fositeConfig,
 		goRvp.store,
 		&compose.CommonStrategy{
 			// alternatively you could use OAuth2Strategy: compose.NewOAuth2JWTStrategy(mustRSAKey())
@@ -207,7 +207,7 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := NewSession(fositeConfig, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
+	session := NewSession(goRvp.fositeConfig, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -244,7 +244,7 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := NewSession(fositeConfig, "", []string{}, "", &Connection{})
+	session := NewSession(goRvp.fositeConfig, "", []string{}, "", &Connection{})
 
 	// TODO refactoring
 	req.ParseForm()

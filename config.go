@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"github.com/go-errors/errors"
+	"time"
 )
 
 type FrontDocument map[string]map[string]Frontend
@@ -33,9 +34,17 @@ type RsaKey struct {
 	Key     *rsa.PrivateKey
 }
 
+type Lifespan struct {
+	// second
+	AccessToken   time.Duration `yaml:"access_token"`
+	RefreshToken  time.Duration `yaml:"refresh_token"`
+	AuthorizeCode time.Duration `yaml:"authorization_code"`
+}
+
 type Config struct {
 	ConfigPath       string
 	Port             string
+	Lifespan         Lifespan         `yaml:"lifespan"`
 	IdentityEndpoint string           `yaml:"identity_endpoint"`
 	Frontend         FrontDocument    `yaml:"frontend"`
 	Database         DatabaseDocument `yaml:"database"`
@@ -68,7 +77,6 @@ func (c *Config) Load() (err error) {
 		return errors.New("error when parse the file.")
 	}
 	c.GenerateRsaKeyIfNotExist()
-
 	return nil
 }
 

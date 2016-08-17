@@ -6,6 +6,14 @@ database:
 
 identity_endpoint: http://localhost:3000/ident
 
+lifespan:
+  # 2 months
+  access_token: 5184000
+  # 6 months
+  refresh_token: 15552000
+  # 10 minutes
+  authorization_code: 600
+
 rsa_key:
   token:
     public: cert/rs256-public.pem
