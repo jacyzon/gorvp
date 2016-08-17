@@ -18,11 +18,9 @@ import (
 	"github.com/pkg/errors"
 	"fmt"
 	"github.com/ory-am/fosite/compose"
+	"github.com/urfave/cli"
+	"os"
 )
-
-var gorvpConfig = &gorvp.Config{
-	ConfigPath: "../fixtures/config.yaml",
-}
 
 type stackTracer interface {
 	StackTrace() errors.StackTrace
@@ -30,14 +28,44 @@ type stackTracer interface {
 
 var oauth2 fosite.OAuth2Provider
 var store gorvp.Store
-var config = &compose.Config{
+var fositeConfig = &compose.Config{
 	AccessTokenLifespan: time.Hour,
 	RefreshTokenLifespan: time.Hour,
 	AuthorizeCodeLifespan: time.Hour,
 }
 
 func main() {
-	gorvpConfig.Load()
+	config := &gorvp.Config{}
+
+	app := cli.NewApp()
+
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "config,c",
+			Value:       "config.yaml",
+			Usage:       "config path",
+			Destination: &config.ConfigPath,
+		},
+		cli.StringFlag{
+			Name:        "port,p",
+			Value:       "3000",
+			Usage:       "port number to listen on",
+			Destination: &config.Port,
+		},
+	}
+
+	app.Action = func(c *cli.Context) error {
+		return runGoRvpWithConfig(config)
+	}
+	app.Run(os.Args)
+}
+
+func runGoRvpWithConfig(gorvpConfig *gorvp.Config) (error) {
+	err := gorvpConfig.Load()
+	if (err != nil) {
+		return err;
+	}
+
 	gorvpConfig.GenerateRsaKeyIfNotExist()
 
 	jwtInternalStrategy := &core.RS256JWTStrategy{
@@ -73,7 +101,7 @@ func main() {
 		fmt.Printf("default trusted api client id: %s, secret: %s\n", id, secret)
 	}
 	oauth2 = compose.Compose(
-		config,
+		fositeConfig,
 		&store,
 		&compose.CommonStrategy{
 			// alternatively you could use OAuth2Strategy: compose.NewOAuth2JWTStrategy(mustRSAKey())
@@ -144,7 +172,8 @@ func main() {
 
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(router))
-	n.Run(":3000")
+	n.Run(":" + gorvpConfig.Port)
+	return nil
 }
 
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
@@ -196,7 +225,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := gorvp.NewSession(config, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
+	session := gorvp.NewSession(fositeConfig, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -234,7 +263,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := gorvp.NewSession(config, "", []string{}, "", &gorvp.Connection{})
+	session := gorvp.NewSession(fositeConfig, "", []string{}, "", &gorvp.Connection{})
 
 	// TODO refactoring
 	req.ParseForm()

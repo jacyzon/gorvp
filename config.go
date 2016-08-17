@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"os"
 	"path/filepath"
+	"github.com/go-errors/errors"
 )
 
 type FrontDocument map[string]map[string]Frontend
@@ -34,6 +35,7 @@ type RsaKey struct {
 
 type Config struct {
 	ConfigPath string
+	Port       string
 	Frontend   FrontDocument    `yaml:"frontend"`
 	Database   DatabaseDocument `yaml:"database"`
 	RsaKey     RsaKeyDocument   `yaml:"rsa_key"`
@@ -48,16 +50,21 @@ type Frontend struct {
 type ConfigScopes []string
 
 func (c *Config) Load() (err error) {
+	if _, err := os.Stat(c.ConfigPath); err != nil {
+		if os.IsNotExist(err) {
+			return errors.New("config file not exist.")
+		}
+	}
 	content, err := ioutil.ReadFile(c.ConfigPath)
 
 	if err != nil {
-		return err
+		return errors.New("cannot read the config file.")
 	}
 
 	err = yaml.Unmarshal(content, c)
 
 	if err != nil {
-		return err
+		return errors.New("error when parse the file.")
 	}
 
 	return nil
