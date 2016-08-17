@@ -17,6 +17,10 @@ type Connection struct {
 	DeletedAt   *time.Time  `sql:"index"`
 }
 
+func (c *Connection) TableName() string {
+	return "oauth_connections"
+}
+
 func (c *Connection) MergeScope(scopes []string) (string) {
 	scopeMap := make(map[string]bool)
 	c.addScopeSliceToMap(scopes, scopeMap)

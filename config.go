@@ -23,8 +23,8 @@ type DatabaseDocument struct {
 }
 
 type RsaKeyDocument struct {
-	Token RsaKey `yaml:"token"`
-	Proxy RsaKey `yaml:"proxy"`
+	Token    RsaKey `yaml:"token"`
+	Internal RsaKey `yaml:"internal"`
 }
 
 type RsaKey struct {
@@ -34,11 +34,12 @@ type RsaKey struct {
 }
 
 type Config struct {
-	ConfigPath string
-	Port       string
-	Frontend   FrontDocument    `yaml:"frontend"`
-	Database   DatabaseDocument `yaml:"database"`
-	RsaKey     RsaKeyDocument   `yaml:"rsa_key"`
+	ConfigPath       string
+	Port             string
+	IdentityEndpoint string           `yaml:"identity_endpoint"`
+	Frontend         FrontDocument    `yaml:"frontend"`
+	Database         DatabaseDocument `yaml:"database"`
+	RsaKey           RsaKeyDocument   `yaml:"rsa_key"`
 }
 
 type Frontend struct {
@@ -66,6 +67,7 @@ func (c *Config) Load() (err error) {
 	if err != nil {
 		return errors.New("error when parse the file.")
 	}
+	c.GenerateRsaKeyIfNotExist()
 
 	return nil
 }
@@ -80,7 +82,7 @@ func (config *Config) SetupRoute(router *mux.Router, m *negroni.Negroni) {
 
 func (c *Config) GenerateRsaKeyIfNotExist() {
 	generateRsaKeyIfNotExist(&c.RsaKey.Token)
-	generateRsaKeyIfNotExist(&c.RsaKey.Proxy)
+	generateRsaKeyIfNotExist(&c.RsaKey.Internal)
 }
 
 func generateRsaKeyIfNotExist(rsaKey *RsaKey) {

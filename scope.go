@@ -18,7 +18,7 @@ type ScopeInfo struct {
 }
 
 func (c *ScopeInfo) TableName() string {
-	return "scope"
+	return "oauth_scopes"
 }
 
 func (s *Scopes) Grant(requestScope string) bool {

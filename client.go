@@ -52,7 +52,7 @@ type Client interface {
 
 // client interface TODO dedicated client file
 func (c *GoRvpClient) TableName() string {
-	return "client"
+	return "oauth_clients"
 }
 
 // GetID returns the client ID.

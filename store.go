@@ -18,7 +18,7 @@ type Store struct {
 
 func (store *Store) Migrate() {
 	store.DB.AutoMigrate(&GoRvpClient{})
-	store.DB.AutoMigrate(&AuthorizeCode{})
+	store.DB.AutoMigrate(&AuthorizationCode{})
 	store.DB.AutoMigrate(&Token{})
 	store.DB.AutoMigrate(&ScopeInfo{})
 	store.DB.AutoMigrate(&ClientRevocation{})
@@ -39,7 +39,7 @@ func (store *Store) GetClient(id string) (fosite.Client, error) {
 func (store *Store) CreateAuthorizeCodeSession(_ context.Context, signature string, req fosite.Requester) error {
 	dataJSON, _ := json.Marshal(req)
 	session := req.GetSession().(*Session)
-	err := store.DB.Create(&AuthorizeCode{
+	err := store.DB.Create(&AuthorizationCode{
 		Signature: signature,
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
@@ -51,8 +51,8 @@ func (store *Store) CreateAuthorizeCodeSession(_ context.Context, signature stri
 	return nil
 }
 
-func (store *Store) GetAuthorizeCode(signature string) (*AuthorizeCode, error) {
-	code := &AuthorizeCode{Signature: signature}
+func (store *Store) GetAuthorizeCode(signature string) (*AuthorizationCode, error) {
+	code := &AuthorizationCode{Signature: signature}
 	err := store.DB.Find(code).Error
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (store *Store) GetAuthorizeCodeSession(_ context.Context, signature string,
 }
 
 func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, signature string) error {
-	authorizeCode := &AuthorizeCode{Signature: signature}
+	authorizeCode := &AuthorizationCode{Signature: signature}
 	err := store.DB.Delete(authorizeCode).Error
 	if err != nil {
 		return fosite.ErrNotFound

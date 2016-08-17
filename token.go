@@ -7,7 +7,7 @@ import (
 	"github.com/ory-am/fosite/token/jwt"
 )
 
-type AuthorizeCode struct {
+type AuthorizationCode struct {
 	Signature string `gorm:"primary_key"`
 	DataJSON  string `gorm:"size:4095"`
 
@@ -36,6 +36,18 @@ type ClientRevocation struct {
 	gorm.Model
 	ClientID string
 	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
+}
+
+func (t *AuthorizationCode) TableName() string {
+	return "oauth_authorization_codes"
+}
+
+func (t *Token) TableName() string {
+	return "oauth_tokens"
+}
+
+func (c *ClientRevocation) TableName() string {
+	return "oauth_client_revocations"
 }
 
 func GetTokenClaimsFromCode(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {

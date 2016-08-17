@@ -4,19 +4,19 @@ import (
 	"net/http"
 	"strings"
 	"github.com/ory-am/fosite/token/jwt"
-	"github.com/ory-am/fosite/handler/oauth2"
+	core "github.com/ory-am/fosite/handler/oauth2"
 	"fmt"
 )
 
 type JwtProxy struct {
 	ScopesKey string
 	Separator string
-	Strategy  *oauth2.RS256JWTStrategy
+	Strategy  *core.RS256JWTStrategy
 	Config    *Config
 	Store     *Store
 }
 
-func NewJwtProxy(store *Store, strategy *oauth2.RS256JWTStrategy, config *Config) *JwtProxy {
+func NewJwtProxy(store *Store, strategy *core.RS256JWTStrategy, config *Config) *JwtProxy {
 	return &JwtProxy{
 		ScopesKey: "sco",
 		Separator: " ",

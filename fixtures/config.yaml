@@ -4,13 +4,15 @@ database:
   # type: mysql
   # connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
 
+identity_endpoint: http://localhost:3000/ident
+
 rsa_key:
   token:
-    public: fixtures/cert/rs256-public.pem
-    private: fixtures/cert/rs256-private.pem
-  proxy:
-    public: fixtures/cert/rs256-public-proxy.pem
-    private: fixtures/cert/rs256-private-proxy.pem
+    public: cert/rs256-public.pem
+    private: cert/rs256-private.pem
+  internal:
+    public: cert/rs256-public-internal.pem
+    private: cert/rs256-private-internal.pem
 
 frontend:
   api.example.com:
