@@ -6,6 +6,7 @@ import (
 	"github.com/ory-am/fosite/token/jwt"
 	core "github.com/ory-am/fosite/handler/oauth2"
 	"fmt"
+	"github.com/ory-am/fosite"
 )
 
 type JwtProxy struct {
@@ -50,7 +51,7 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 
 		// check grant
 		for _, requestScope := range scopesSlice {
-			granted = checkGrant(scopes, requestScope)
+			granted = fosite.HierarchicScopeStrategy(scopes, requestScope)
 			if granted {
 				token, _ := GetBearerToken(r)
 				r.Header.Add("Token", token)

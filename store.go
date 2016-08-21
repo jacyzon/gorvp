@@ -8,12 +8,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
 	"github.com/pborman/uuid"
+	"fmt"
 )
 
 type Store struct {
-	DB             *gorm.DB
-	OC             *OwnerClient
-	MandatoryScope string
+	DB *gorm.DB
+	OC *OwnerClient
 }
 
 func (store *Store) Migrate() {
@@ -190,26 +190,28 @@ func (store *Store) PersistRefreshTokenGrantSession(ctx context.Context, origina
 	return nil
 }
 
-func (store *Store) CreateTrustedClient(clientName string) (id string, secret string, err error) {
+func (store *Store) CreateTrustedClient(trustedClient TrustedClientType) {
 	// create one if not exist, or override the first created one
-	client := &GoRvpClient{}
-	err = store.DB.Where(&GoRvpClient{
-		AppType: AppTypeOwner,
-		Trusted: true,
-	}).Order("created_at").First(&client).Error
+	client := &GoRvpClient{Name: trustedClient.Name}
+	err := store.DB.Where(client).First(&client).Error
 
 	if err == nil || err == gorm.ErrRecordNotFound {
-		// generate client secret
-		h := xrequestid.New(16)
-		secret, _ = h.Generate(h.Size)
-		encryptedSecret, _ := bcrypt.GenerateFromPassword([]byte(secret), 10)
-		secretString := string(encryptedSecret)
+
+		var secret string
+		if trustedClient.Secret == "" {
+			// generate client secret
+			h := xrequestid.New(16)
+			secret, _ = h.Generate(h.Size)
+			trustedClient.Secret = secret
+			encryptedSecret, _ := bcrypt.GenerateFromPassword([]byte(secret), 10)
+			secretString := string(encryptedSecret)
+			client.Secret = secretString
+		}
 
 		client.AppType = AppTypeOwner
 		client.Trusted = true
-		client.Secret = secretString
-		client.Name = clientName
-		client.Scopes.AddMandatoryScope(store.MandatoryScope)
+		client.Name = trustedClient.Name
+		client.Scopes = trustedClient.Scopes
 		scopeJson, _ := json.Marshal(client.Scopes)
 		client.ScopesJSON = string(scopeJson)
 
@@ -219,11 +221,10 @@ func (store *Store) CreateTrustedClient(clientName string) (id string, secret st
 		} else if err == nil {
 			store.DB.Model(&client).Update(&client)
 		}
+		trustedClient.ID = client.ID
 
-		return client.ID, secret, nil
+		fmt.Printf("Trusted client: %s, secret: %s\n", client.Name, secret)
 	}
-
-	return "", "", err
 }
 
 func (store *Store) CreateScopeInfo(config *Config) {

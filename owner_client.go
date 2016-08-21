@@ -9,7 +9,7 @@ import (
 	"github.com/pborman/uuid"
 	"time"
 	"github.com/ory-am/fosite/token/jwt"
-	oauth2 "github.com/ory-am/fosite/handler/oauth2"
+	"github.com/ory-am/fosite/handler/oauth2"
 	"net/url"
 	"bytes"
 	"strconv"
@@ -21,7 +21,6 @@ type OwnerClient struct {
 	IdentityProviderName string
 	ClientID             string
 	ClientSecret         string
-	MandatoryScope       string
 	TokenEndpoint        string
 	IdentityEndpoint     string
 	Token                string
@@ -37,7 +36,7 @@ func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	conf := goauth2.Config{
 		ClientID:     oc.ClientID,
 		ClientSecret: oc.ClientSecret,
-		Scopes:       []string{oc.MandatoryScope},
+		Scopes:       []string{"password"},
 		Endpoint:     goauth2.Endpoint{TokenURL: oc.TokenEndpoint},
 	}
 	token, err := conf.PasswordCredentialsToken(goauth2.NoContext,

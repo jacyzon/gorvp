@@ -26,7 +26,6 @@ func NewSession(lifespan core.Lifespan, userID string, scopes fosite.Arguments, 
 				Issuer:    "https://api.gorvp.dev", // TODO move into config
 				Subject:   userID,
 				Audience:  clientID,
-				ExpiresAt: time.Now().Add(time.Hour * 6), // TODO move into config
 				IssuedAt:  time.Now(),
 			},
 			JWTHeader: &jwt.Headers{

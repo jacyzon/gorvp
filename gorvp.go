@@ -78,15 +78,13 @@ func (goRvp *GoRvp) Run() (error) {
 
 	goRvp.store = &Store{
 		DB: db,
-		MandatoryScope: "gorvp",
 	}
 	goRvp.store.Migrate()
 	goRvp.store.CreateScopeInfo(goRvp.Config)
-	id, secret, err := goRvp.store.CreateTrustedClient("gorvp_api")
-	if err == nil {
-		// TODO log lib
-		fmt.Printf("default trusted api client id: %s, secret: %s\n", id, secret)
-	}
+
+	goRvp.store.CreateTrustedClient(goRvp.Config.TrustedClient.Api)
+	goRvp.store.CreateTrustedClient(goRvp.Config.TrustedClient.Admin)
+
 	goRvp.oauth2 = compose.Compose(
 		goRvp.fositeConfig,
 		goRvp.store,
@@ -101,13 +99,12 @@ func (goRvp *GoRvp) Run() (error) {
 		compose.OAuth2RefreshTokenGrantFactory,
 		compose.OAuth2ResourceOwnerPasswordCredentialsFactory,
 	)
-	tokenEndpoint := fmt.Sprintf("http://127.0.0.1:%s/token", goRvp.Config.Port)
+	tokenEndpoint := fmt.Sprintf("http://127.0.0.1:%s%s", goRvp.Config.Port, goRvp.Config.IdentityEndpoint)
 	oc := &OwnerClient{
 		JWTStrategy:          jwtInternalStrategy,
 		IdentityProviderName: "gorvp_identity_provider",
-		ClientID:             id,
-		ClientSecret:         secret,
-		MandatoryScope:       "gorvp",
+		ClientID:             goRvp.Config.TrustedClient.Api.ID,
+		ClientSecret:         goRvp.Config.TrustedClient.Api.Secret,
 		TokenEndpoint:        tokenEndpoint,
 		IdentityEndpoint:     goRvp.Config.IdentityEndpoint,
 		ReNewTokenDuration:   time.Minute * 30,
@@ -118,8 +115,8 @@ func (goRvp *GoRvp) Run() (error) {
 		// TODO add limit plugin
 		negroni.Wrap(oc),
 	))
-	goRvp.Router.HandleFunc("/oauth", goRvp.authEndpoint)
-	goRvp.Router.HandleFunc("/token", goRvp.tokenEndpoint)
+	goRvp.Router.HandleFunc(goRvp.Config.Oauth2AuthMountPoint, goRvp.authEndpoint)
+	goRvp.Router.HandleFunc(goRvp.Config.Oauth2TokenMountPoint, goRvp.tokenEndpoint)
 
 	// TODO plugins support
 	jwtProxy := NewJwtProxy(goRvp.store, tokenStrategy, goRvp.Config)
@@ -131,7 +128,6 @@ func (goRvp *GoRvp) Run() (error) {
 		Router:goRvp.Router.PathPrefix("/admin").Subrouter(),
 		Store: goRvp.store,
 		Hash: xrequestid.New(16),
-		MandatoryScope: "gorvp",
 	}
 	adminHandler.SetupHandler()
 
@@ -277,9 +273,13 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// TODO refactoring: select app type
 	if ar.GetGrantTypes().Exact("password") {
-		clientID := ar.GetClient().GetID()
+		client := ar.GetClient().(Client)
+		clientID := client.GetID()
+		if !client.GetFullScopes().Grant(ar.GetRequestedScopes()) {
+			WriteError(rw, ErrClientPermission)
+			return
+		}
 		username := req.PostForm.Get("username")
-		ar.GrantScope("password")
 		connection, err := goRvp.store.UpdateConnection(clientID, username, ar.GetGrantedScopes())
 		if err != nil {
 			WriteError(rw, err)

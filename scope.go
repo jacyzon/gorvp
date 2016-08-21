@@ -1,12 +1,12 @@
 package gorvp
 
 import (
-	"strings"
+	"github.com/ory-am/fosite"
 )
 
 type Scope struct {
-	Name     string `json:"name"`
-	Required bool   `json:"required"`
+	Name     string `json:"name" yaml:"name"`
+	Required bool   `json:"required" yaml:"required"`
 }
 
 type Scopes []Scope
@@ -21,56 +21,30 @@ func (c *ScopeInfo) TableName() string {
 	return "oauth_scopes"
 }
 
-func (s *Scopes) Grant(requestScope string) bool {
+func (s *Scopes) Grant(requestScopes fosite.Arguments) bool {
 	ss := []Scope(*s)
 	scopes := make([]string, len(ss))
 	for i, scope := range ss {
 		scopes[i] = scope.Name
 	}
-	return checkGrant(scopes, requestScope)
+	for _, scope := range requestScopes {
+		granted := fosite.HierarchicScopeStrategy(scopes, scope)
+		if !granted {
+			return false
+		}
+	}
+	return true;
 }
 
-func (s *Scopes) AddMandatoryScope(mandatoryScope string) {
-	shouldAddMandatoryScope := true
+func (s *Scopes) AddRequiredScope(requiredScope string) {
+	shouldAddRequiredScope := true
 	for _, scope := range *s {
-		if scope.Name == mandatoryScope {
-			shouldAddMandatoryScope = false
+		if scope.Name == requiredScope {
+			shouldAddRequiredScope = false
 			break
 		}
 	}
-	if shouldAddMandatoryScope {
-		*s = append(*s, Scope{Name: mandatoryScope, Required: true})
+	if shouldAddRequiredScope {
+		*s = append(*s, Scope{Name: requiredScope, Required: true})
 	}
-}
-
-func checkGrant(scopes []string, requestScope string) bool {
-	for _, scope := range scopes {
-		if scope == "" {
-			break
-		}
-		// foo == foo -> true
-		if scope == requestScope {
-			return true
-		}
-
-		// picture.read > picture -> false (scope picture includes read, write, ...)
-		if len(scope) > len(requestScope) {
-			continue
-		}
-
-		needles := strings.Split(requestScope, ".")
-		haystack := strings.Split(scope, ".")
-		haystackLen := len(haystack) - 1
-		for k, needle := range needles {
-			if haystackLen < k {
-				return true
-			}
-
-			current := haystack[k]
-			if current != needle {
-				continue
-			}
-		}
-	}
-	return false
 }

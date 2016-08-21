@@ -16,6 +16,9 @@ var (
 	ErrDatabase = errors.New("Database error")
 	ErrClientPermission = errors.New("client has no permission on requested scopes")
 	ErrConnectionRevoked = errors.New("This connection had been revoked")
+	ErrDuplicateTrustedClientName = errors.New("Can not use same client name as official client.")
+	ErrInvalidRequest = errors.New("The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed")
+	ErrUnsupportedAppType =  errors.New("Unsupported app type")
 )
 
 type GoRvpError struct {
@@ -79,6 +82,24 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 			Type:        "connection_revoked",
 			Description: ErrConnectionRevoked.Error(),
 			StatusCode:  http.StatusForbidden,
+		}
+	case ErrDuplicateTrustedClientName:
+		return &GoRvpError{
+			Type:        "connection_revoked",
+			Description: ErrDuplicateTrustedClientName.Error(),
+			StatusCode:  http.StatusForbidden,
+		}
+	case ErrInvalidRequest:
+		return &GoRvpError{
+			Type:        "invalid_request",
+			Description: ErrInvalidRequest.Error(),
+			StatusCode:  http.StatusBadRequest,
+		}
+	case ErrUnsupportedAppType:
+		return &GoRvpError{
+			Type:        "app_type_unsupported",
+			Description: ErrUnsupportedAppType.Error(),
+			StatusCode:  http.StatusBadRequest,
 		}
 	default:
 		return &GoRvpError{

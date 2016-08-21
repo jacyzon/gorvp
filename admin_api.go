@@ -10,11 +10,10 @@ import (
 )
 
 type AdminHandler struct {
-	Router         *mux.Router
-	Routes         Routes
-	Store          *Store
-	Hash           *xrequestid.XRequestID
-	MandatoryScope string
+	Router *mux.Router
+	Routes Routes
+	Store  *Store
+	Hash   *xrequestid.XRequestID
 }
 
 type Route struct {
@@ -42,12 +41,8 @@ type ScopeResponse struct {
 
 type Routes []Route
 
-func (h *AdminHandler) auth(w http.ResponseWriter, r *http.Request) {
-	// TODO check if the user has permission to access admin API, and the request client is also trusted
-	// if authorizeRequest.GetScopes().Has("admin") {
-	//     http.Error(rw, "you're not allowed to do that", http.StatusForbidden)
-	//     return
-	// }
+func (h *AdminHandler) Auth(w http.ResponseWriter, r *http.Request) {
+
 }
 
 func (h *AdminHandler) GetClients(w http.ResponseWriter, r *http.Request) {
@@ -58,15 +53,18 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	createClientRequest := CreateClientRequest{}
 	err := decoder.Decode(&createClientRequest)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest);
+		WriteError(w, ErrInvalidRequest)
+		return
+	}
+	// check if the name is same as the trusted client
+	duplicateClient := &GoRvpClient{Name: createClientRequest.Name}
+	err = h.Store.DB.Where(duplicateClient).First(duplicateClient).Error
+	if err == nil && duplicateClient.Trusted {
+		WriteError(w, ErrDuplicateTrustedClientName)
 		return
 	}
 
-	createClientRequest.Scope.AddMandatoryScope(h.MandatoryScope)
-
-	// TODO appType to grantTypes and ResponseTypes helper
 	// TODO data validation
-
 	// ==================================================================
 	// | AppType     | GrantTypes         | ResponseTypes | Data Type   |
 	// ------------------------------------------------------------------
@@ -108,7 +106,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		}
 		break
 	default:
-		http.Error(w, "Unsupported app type", http.StatusBadRequest)
+		WriteError(w, ErrUnsupportedAppType)
 		return
 	}
 	scopeJson, _ := json.Marshal(createClientRequest.Scope)
@@ -145,6 +143,12 @@ func (h *AdminHandler) DeleteClient(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandler) SetupHandler() {
 	h.Routes = Routes{
+		Route{
+			"Get Access of Admin API",
+			"POST",
+			"/auth",
+			h.Auth,
+		},
 		Route{
 			"Get clients",
 			"GET",
