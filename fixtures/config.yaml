@@ -4,7 +4,7 @@ database:
   # type: mysql
   # connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
 
-oauth2_auth_mount_point: /oauth/auth
+oauth2_auth_mount_point: /oauth/authorize
 oauth2_token_mount_point: /oauth/token
 
 trusted_clients:
@@ -13,14 +13,14 @@ trusted_clients:
       - name: password
         required: true
     identity_endpoint: http://localhost:3000/ident
-    token_mount_point: /auth
+    token_mount_point: /authorize
     default_provider: true
   - name: gorvp_admin
     scopes:
       - name: admin
         required: true
     identity_endpoint: http://localhost:3000/ident
-    token_mount_point: /admin/auth
+    token_mount_point: /admin/authorize
 
 lifespan:
   # 2 months
