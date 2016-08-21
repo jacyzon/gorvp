@@ -20,11 +20,12 @@ type AuthorizationCode struct {
 }
 
 type Token struct {
-	Signature    string `gorm:"primary_key"`
-	DataJSON     string `gorm:"size:4095"`
+	Signature    string      `gorm:"primary_key"`
+	DataJSON     string      `gorm:"size:4095"`
 
-	UserID       string `gorm:"index"`
-	ClientID     string `gorm:"index"`
+	UserID       string      `gorm:"index"`
+	Client       GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
+	ClientID     string
 	RefreshToken bool
 
 	CreatedAt    time.Time
@@ -53,7 +54,7 @@ func (c *ClientRevocation) TableName() string {
 func GetTokenClaimsFromCode(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
 	token := r.PostForm.Get("code")
 	if token == "" {
-		return nil, nil, ErrTokenNotFound
+		return nil, nil, ErrTokenNotFoundBearer
 	}
 	return getCodeClaims(store, token)
 }
@@ -61,7 +62,7 @@ func GetTokenClaimsFromCode(store *Store, r *http.Request) (*jwt.JWTClaims, *Con
 func GetTokenClaimsFromRefreshToken(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
 	token := r.PostForm.Get("refresh_token")
 	if token == "" {
-		return nil, nil, ErrTokenNotFound
+		return nil, nil, ErrTokenNotFoundBearer
 	}
 	return getTokenClaims(store, token)
 }
@@ -69,7 +70,7 @@ func GetTokenClaimsFromRefreshToken(store *Store, r *http.Request) (*jwt.JWTClai
 func GetTokenClaimsFromBearer(store *Store, r *http.Request) (*jwt.JWTClaims, *Connection, error) {
 	token, err := GetBearerToken(r)
 	if err != nil {
-		return nil, nil, ErrTokenNotFound
+		return nil, nil, ErrTokenNotFoundBearer
 	}
 	return getTokenClaims(store, token)
 }

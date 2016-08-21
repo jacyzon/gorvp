@@ -8,7 +8,8 @@ import (
 
 var (
 	ErrTokenInvalid = errors.New("Token invalid")
-	ErrTokenNotFound = errors.New("Authorization header format must be bearer token")
+	ErrTokenNotFoundBearer = errors.New("Authorization header format must be bearer token")
+	ErrTokenNotFoundAuth = errors.New("HTTP Authorization header missing or invalid")
 	ErrTokenNotFoundCode = errors.New("Token not found in the post form, name: token")
 	ErrTokenNotFoundRefreshToken = errors.New("Token not found in the post form, name: refresh_token")
 	ErrPermissionDenied = errors.New("You do not have permission on request resource")
@@ -18,7 +19,8 @@ var (
 	ErrConnectionRevoked = errors.New("This connection had been revoked")
 	ErrDuplicateTrustedClientName = errors.New("Can not use same client name as official client.")
 	ErrInvalidRequest = errors.New("The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed")
-	ErrUnsupportedAppType =  errors.New("Unsupported app type")
+	ErrUnsupportedAppType = errors.New("Unsupported app type")
+	ErrInvalidClient = errors.New("Client authentication failed (e.g., unknown client, no client authentication included, or unsupported authentication method)")
 )
 
 type GoRvpError struct {
@@ -35,10 +37,16 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 			Description: ErrTokenInvalid.Error(),
 			StatusCode:  http.StatusUnauthorized,
 		}
-	case ErrTokenNotFound:
+	case ErrTokenNotFoundBearer:
 		return &GoRvpError{
 			Type:        "token_not_found",
-			Description: ErrTokenNotFound.Error(),
+			Description: ErrTokenNotFoundBearer.Error(),
+			StatusCode:  http.StatusBadRequest,
+		}
+	case ErrTokenNotFoundAuth:
+		return &GoRvpError{
+			Type:        "token_not_found",
+			Description: ErrTokenNotFoundAuth.Error(),
 			StatusCode:  http.StatusBadRequest,
 		}
 	case ErrTokenNotFoundCode:
@@ -100,6 +108,12 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 			Type:        "app_type_unsupported",
 			Description: ErrUnsupportedAppType.Error(),
 			StatusCode:  http.StatusBadRequest,
+		}
+	case ErrInvalidClient:
+		return &GoRvpError{
+			Type:        "invalid_client",
+			Description: ErrInvalidClient.Error(),
+			StatusCode:  http.StatusForbidden,
 		}
 	default:
 		return &GoRvpError{

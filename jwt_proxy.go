@@ -60,13 +60,9 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 
 func GetBearerToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return "", nil // no token
-	}
-
 	authHeaderParts := strings.Split(authHeader, " ")
 	if len(authHeaderParts) != 2 || strings.ToLower(authHeaderParts[0]) != "bearer" {
-		return "", ErrTokenNotFound
+		return "", ErrTokenNotFoundBearer
 	}
 
 	return authHeaderParts[1], nil

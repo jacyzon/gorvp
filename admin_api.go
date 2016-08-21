@@ -90,6 +90,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	// | android     | implicit           | token         | AndroidData |
 	// | ios         | implicit           | token         |             |
 	// | trusted     | password           | token         |             |
+	// | client      | client_credentials | token         |             |
 	// ==================================================================
 	client := GoRvpClient{
 		ID:      uuid.New(),
@@ -100,28 +101,25 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	switch createClientRequest.AppType {
 	case AppTypeWebBackend:
 		client.RedirectURI = createClientRequest.RedirectURI
-		break
 	case AppTypeWebApp:
 		client.RedirectURI = createClientRequest.RedirectURI
-		break
 	case AppTypeAndroid:
 		client.StartActivity = createClientRequest.StartActivity
 		client.PackageName = createClientRequest.PackageName
 		client.KeyHash = createClientRequest.KeyHash
 		// TODO
 		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
-		break
 	case AppTypeIos:
 		// not implemented yet
 		// TODO
 		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
-		break
 	case AppTypeOwner:
 		client.RedirectURI = createClientRequest.RedirectURI
 		if createClientRequest.Trusted {
 			client.Trusted = createClientRequest.Trusted
 		}
-		break
+	case AppTypeClient:
+		// no additional infomation needed for client credential type
 	default:
 		WriteError(w, ErrUnsupportedAppType)
 		return

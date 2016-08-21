@@ -138,8 +138,9 @@ func (goRvp *GoRvp) Run() (error) {
 	clientHandler.SetupHandler()
 
 	tokenHandler := TokenHandler{
-		Router:goRvp.Router.PathPrefix("/token").Subrouter(),
+		Router:goRvp.Router.PathPrefix(goRvp.Config.Oauth2TokenMountPoint).Subrouter(),
 		Store: goRvp.store,
+		Hasher: goRvp.oauth2.(*fosite.Fosite).Hasher,
 	}
 	tokenHandler.SetupHandler()
 
@@ -299,6 +300,15 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 		session.JWTClaims.Audience = claims.Audience
 		session.JWTClaims.Subject = claims.Subject
 		session.SetConnection(connection)
+	} else if ar.GetGrantTypes().Exact("client_credentials") {
+		client := ar.GetClient().(Client)
+		clientID := client.GetID()
+		if !client.GetFullScopes().Grant(ar) {
+			WriteError(rw, ErrClientPermission)
+			return
+		}
+		session.SetScopes(ar.GetGrantedScopes())
+		session.JWTClaims.Audience = clientID
 	}
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers

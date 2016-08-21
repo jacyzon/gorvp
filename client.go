@@ -11,6 +11,7 @@ const AppTypeIos = "ios"
 const AppTypeWebApp = "web_app"
 const AppTypeWebBackend = "web_backend"
 const AppTypeOwner = "owner"
+const AppTypeClient = "client"
 
 // Grant data
 type OAuthData struct {
@@ -103,6 +104,8 @@ func (c *GoRvpClient) GetGrantTypes() fosite.Arguments {
 		return []string{"implicit", "refresh_token"}
 	case AppTypeOwner:
 		return []string{"password"}
+	case AppTypeClient:
+		return []string{"client_credentials"}
 	}
 	return []string{}
 }
@@ -121,6 +124,8 @@ func (c *GoRvpClient) GetResponseTypes() fosite.Arguments {
 		return fosite.Arguments{"token"}
 	case AppTypeOwner:
 		return fosite.Arguments{"token"}
+	case AppTypeClient:
+		return []string{"token"}
 	}
 	return fosite.Arguments{}
 }

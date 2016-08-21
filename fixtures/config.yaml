@@ -4,8 +4,8 @@ database:
   # type: mysql
   # connection: gorvp:gorvp@/gorvp?charset=utf8&parseTime=True&loc=Local
 
-oauth2_auth_mount_point: /oauth2/auth
-oauth2_token_mount_point: /oauth2/token
+oauth2_auth_mount_point: /oauth/auth
+oauth2_token_mount_point: /oauth/token
 
 trusted_clients:
   - name: gorvp_api
