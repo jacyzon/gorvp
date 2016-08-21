@@ -21,15 +21,23 @@ func (c *ScopeInfo) TableName() string {
 	return "oauth_scopes"
 }
 
-func (s *Scopes) Grant(requestScopes fosite.Arguments) bool {
+func (s *Scopes) ToArguments() fosite.Arguments {
 	ss := []Scope(*s)
 	scopes := make([]string, len(ss))
 	for i, scope := range ss {
 		scopes[i] = scope.Name
 	}
+	return scopes
+}
+
+func (s *Scopes) Grant(ar fosite.AccessRequester) bool {
+	requestScopes := ar.GetRequestedScopes()
+	scopes := s.ToArguments()
 	for _, scope := range requestScopes {
 		granted := fosite.HierarchicScopeStrategy(scopes, scope)
-		if !granted {
+		if granted {
+			ar.GrantScope(scope)
+		} else {
 			return false
 		}
 	}

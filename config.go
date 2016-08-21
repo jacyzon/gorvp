@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"github.com/go-errors/errors"
 	"time"
-	"fmt"
 )
 
 type FrontDocument map[string]map[string]Frontend
@@ -43,29 +42,25 @@ type Lifespan struct {
 }
 
 type TrustedClient struct {
-	Api   TrustedClientType `yaml:"api"`
-	Admin TrustedClientType `yaml:"admin"`
-}
-
-type TrustedClientType struct {
-	ID     string
-	Name   string  `yaml:"name"`
-	Scopes Scopes `yaml:"scopes"`
-	Secret string  `yaml:"secret"`
+	ID               string
+	Name             string `yaml:"name"`
+	Scopes           Scopes `yaml:"scopes"`
+	Secret           string `yaml:"secret"`
+	IdentityEndpoint string `yaml:"identity_endpoint"`
+	TokenMountPoint  string `yaml:"token_mount_point"`
+	Default_provider bool   `yaml:"default_provider"`
 }
 
 type Config struct {
 	ConfigPath            string
 	Port                  string
 	Lifespan              Lifespan         `yaml:"lifespan"`
-	IdentityEndpoint      string           `yaml:"identity_endpoint"`
-	IdentityEndpointAdmin string           `yaml:"identity_endpoint_admin"`
 	Frontend              FrontDocument    `yaml:"frontend"`
 	Database              DatabaseDocument `yaml:"database"`
 	RsaKey                RsaKeyDocument   `yaml:"rsa_key"`
 	Oauth2AuthMountPoint  string           `yaml:"oauth2_auth_mount_point"`
 	Oauth2TokenMountPoint string           `yaml:"oauth2_token_mount_point"`
-	TrustedClient         TrustedClient    `yaml:"trusted_client"`
+	TrustedClients        []TrustedClient  `yaml:"trusted_clients"`
 }
 
 type Frontend struct {
@@ -90,7 +85,6 @@ func (c *Config) Load() (err error) {
 
 	err = yaml.Unmarshal(content, c)
 
-	fmt.Println(c.TrustedClient.Api.Scopes)
 	if err != nil {
 		return errors.New("error when parse the file.")
 	}

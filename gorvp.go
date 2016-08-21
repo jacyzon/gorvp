@@ -82,9 +82,6 @@ func (goRvp *GoRvp) Run() (error) {
 	goRvp.store.Migrate()
 	goRvp.store.CreateScopeInfo(goRvp.Config)
 
-	goRvp.store.CreateTrustedClient(goRvp.Config.TrustedClient.Api)
-	goRvp.store.CreateTrustedClient(goRvp.Config.TrustedClient.Admin)
-
 	goRvp.oauth2 = compose.Compose(
 		goRvp.fositeConfig,
 		goRvp.store,
@@ -99,22 +96,25 @@ func (goRvp *GoRvp) Run() (error) {
 		compose.OAuth2RefreshTokenGrantFactory,
 		compose.OAuth2ResourceOwnerPasswordCredentialsFactory,
 	)
-	tokenEndpoint := fmt.Sprintf("http://127.0.0.1:%s%s", goRvp.Config.Port, goRvp.Config.IdentityEndpoint)
-	oc := &OwnerClient{
-		JWTStrategy:          jwtInternalStrategy,
-		IdentityProviderName: "gorvp_identity_provider",
-		ClientID:             goRvp.Config.TrustedClient.Api.ID,
-		ClientSecret:         goRvp.Config.TrustedClient.Api.Secret,
-		TokenEndpoint:        tokenEndpoint,
-		IdentityEndpoint:     goRvp.Config.IdentityEndpoint,
-		ReNewTokenDuration:   time.Minute * 30,
-	}
-	goRvp.store.OC = oc
+	OAuth2TokenEndpoint := fmt.Sprintf("http://127.0.0.1:%s%s", goRvp.Config.Port, goRvp.Config.Oauth2TokenMountPoint)
 
-	goRvp.Router.PathPrefix("/auth").Handler(negroni.New(
-		// TODO add limit plugin
-		negroni.Wrap(oc),
-	))
+	for _, trustedClient := range goRvp.Config.TrustedClients {
+		goRvp.store.CreateTrustedClient(&trustedClient)
+		oc := &OwnerClient{
+			JWTStrategy:        jwtInternalStrategy,
+			TokenEndpoint:      OAuth2TokenEndpoint,
+			ReNewTokenDuration: time.Minute * 30,
+			TrustedClient:      trustedClient,
+		}
+		goRvp.Router.PathPrefix(trustedClient.TokenMountPoint).Handler(negroni.New(
+			// TODO add limit plugin
+			negroni.Wrap(oc),
+		))
+		if goRvp.store.OC == nil && trustedClient.Default_provider {
+			goRvp.store.OC = oc
+		}
+	}
+
 	goRvp.Router.HandleFunc(goRvp.Config.Oauth2AuthMountPoint, goRvp.authEndpoint)
 	goRvp.Router.HandleFunc(goRvp.Config.Oauth2TokenMountPoint, goRvp.tokenEndpoint)
 
@@ -275,7 +275,7 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	if ar.GetGrantTypes().Exact("password") {
 		client := ar.GetClient().(Client)
 		clientID := client.GetID()
-		if !client.GetFullScopes().Grant(ar.GetRequestedScopes()) {
+		if !client.GetFullScopes().Grant(ar) {
 			WriteError(rw, ErrClientPermission)
 			return
 		}

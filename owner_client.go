@@ -17,14 +17,11 @@ import (
 )
 
 type OwnerClient struct {
-	JWTStrategy          *oauth2.RS256JWTStrategy
-	IdentityProviderName string
-	ClientID             string
-	ClientSecret         string
-	TokenEndpoint        string
-	IdentityEndpoint     string
-	Token                string
-	ReNewTokenDuration   time.Duration
+	JWTStrategy        *oauth2.RS256JWTStrategy
+	TokenEndpoint      string
+	Token              string
+	TrustedClient      TrustedClient
+	ReNewTokenDuration time.Duration
 }
 
 func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -32,11 +29,10 @@ func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 	}
 	r.ParseForm()
-
 	conf := goauth2.Config{
-		ClientID:     oc.ClientID,
-		ClientSecret: oc.ClientSecret,
-		Scopes:       []string{"password"},
+		ClientID:     oc.TrustedClient.ID,
+		ClientSecret: oc.TrustedClient.Secret,
+		Scopes:       oc.TrustedClient.Scopes.ToArguments(),
 		Endpoint:     goauth2.Endpoint{TokenURL: oc.TokenEndpoint},
 	}
 	token, err := conf.PasswordCredentialsToken(goauth2.NoContext,
@@ -61,7 +57,7 @@ func (oc *OwnerClient) Authenticate(_ context.Context, username string, password
 	form.Add("password", password)
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", oc.IdentityEndpoint, bytes.NewBufferString(form.Encode()))
+	req, err := http.NewRequest("POST", oc.TrustedClient.IdentityEndpoint, bytes.NewBufferString(form.Encode()))
 	req.Header.Add("Authorization", authHeader)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
@@ -100,8 +96,8 @@ func (oc *OwnerClient) renewToken() {
 		JWTClaims: &jwt.JWTClaims{
 			JTI:       uuid.New(),
 			Issuer:    "inner", // TODO router public key
-			Audience:  oc.ClientID,
-			Subject:   oc.IdentityProviderName,
+			Audience:  oc.TrustedClient.ID,
+			Subject:   oc.TrustedClient.Name,
 			ExpiresAt: time.Now().Add(time.Hour * 6),
 			IssuedAt:  time.Now(),
 			NotBefore: time.Now(),

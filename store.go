@@ -190,7 +190,7 @@ func (store *Store) PersistRefreshTokenGrantSession(ctx context.Context, origina
 	return nil
 }
 
-func (store *Store) CreateTrustedClient(trustedClient TrustedClientType) {
+func (store *Store) CreateTrustedClient(trustedClient *TrustedClient) {
 	// create one if not exist, or override the first created one
 	client := &GoRvpClient{Name: trustedClient.Name}
 	err := store.DB.Where(client).First(&client).Error
@@ -223,7 +223,7 @@ func (store *Store) CreateTrustedClient(trustedClient TrustedClientType) {
 		}
 		trustedClient.ID = client.ID
 
-		fmt.Printf("Trusted client: %s, secret: %s\n", client.Name, secret)
+		fmt.Printf("Trusted client id: %s, name: %s, secret: %s\n", trustedClient.ID, trustedClient.Name, secret)
 	}
 }
 
