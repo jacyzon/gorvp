@@ -34,7 +34,7 @@ type RsaKey struct {
 	Key     *rsa.PrivateKey
 }
 
-type Lifespan struct {
+type LifespanConf struct {
 	// second
 	AccessToken   time.Duration `yaml:"access_token"`
 	RefreshToken  time.Duration `yaml:"refresh_token"`
@@ -54,7 +54,7 @@ type TrustedClient struct {
 type Config struct {
 	ConfigPath            string
 	Port                  string
-	Lifespan              Lifespan         `yaml:"lifespan"`
+	Lifespan              LifespanConf     `yaml:"lifespan"`
 	Frontend              FrontDocument    `yaml:"frontend"`
 	Database              DatabaseDocument `yaml:"database"`
 	RsaKey                RsaKeyDocument   `yaml:"rsa_key"`

@@ -7,18 +7,19 @@ import (
 	"strings"
 	"github.com/ory-am/fosite/handler/openid"
 	core "github.com/ory-am/fosite/handler/oauth2"
+	"github.com/ory-am/fosite/compose"
 )
 
 type Session struct {
 	ScopeSeparator string
-	core.Lifespan
+	*compose.Lifespan
 	*core.HMACSession
 	*core.JWTSession
 	*openid.DefaultSession
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(lifespan core.Lifespan, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
+func NewSession(lifespan *compose.Lifespan, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
 	session := &Session{
 		Lifespan: lifespan,
 		JWTSession: &core.JWTSession{
@@ -59,7 +60,7 @@ func GrantScope(oauth2 fosite.OAuth2Provider, ar fosite.Requester) error {
 		if clientScopes.Has(requestScope) {
 			ar.GrantScope(requestScope)
 		} else {
-			return ErrPermissionDenied
+			return ErrClientPermission
 		}
 	}
 	return nil

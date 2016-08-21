@@ -50,9 +50,11 @@ func (goRvp *GoRvp) Run() (error) {
 		return err;
 	}
 	goRvp.fositeConfig = &compose.Config{
-		AccessTokenLifespan: goRvp.Config.Lifespan.AccessToken * time.Second,
-		RefreshTokenLifespan: goRvp.Config.Lifespan.RefreshToken * time.Second,
-		AuthorizeCodeLifespan: goRvp.Config.Lifespan.AuthorizeCode * time.Second,
+		Lifespan : &compose.Lifespan{
+			AccessTokenLifespan: goRvp.Config.Lifespan.AccessToken * time.Second,
+			RefreshTokenLifespan: goRvp.Config.Lifespan.RefreshToken * time.Second,
+			AuthorizeCodeLifespan: goRvp.Config.Lifespan.AuthorizeCode * time.Second,
+		},
 	}
 
 	jwtInternalStrategy := &oauth2.RS256JWTStrategy{
@@ -204,7 +206,7 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := NewSession(goRvp.fositeConfig, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
+	session := NewSession(goRvp.fositeConfig.Lifespan, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -241,7 +243,7 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := NewSession(goRvp.fositeConfig, "", []string{}, "", &Connection{})
+	session := NewSession(goRvp.fositeConfig.Lifespan, "", []string{}, "", &Connection{})
 
 	// TODO refactoring
 	req.ParseForm()
