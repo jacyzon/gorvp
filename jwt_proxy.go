@@ -10,8 +10,6 @@ import (
 )
 
 type JwtProxy struct {
-	ScopesKey string
-	Separator string
 	Strategy  *core.RS256JWTStrategy
 	Config    *Config
 	Store     *Store
@@ -19,8 +17,6 @@ type JwtProxy struct {
 
 func NewJwtProxy(store *Store, strategy *core.RS256JWTStrategy, config *Config) *JwtProxy {
 	return &JwtProxy{
-		ScopesKey: "sco",
-		Separator: " ",
 		Strategy: strategy,
 		Config: config,
 		Store: store,
@@ -44,12 +40,8 @@ func (jwtp *JwtProxy) ServeHTTP(rw http.ResponseWriter, r *http.Request, next ht
 			return
 		}
 
-		// parse scopes
-		var scopesSlice []string
-		scopeString := claims.Get(jwtp.ScopesKey).(string)
-		scopesSlice = strings.Split(scopeString, jwtp.Separator)
-
 		// check grant
+		scopesSlice := GetScopeArgumentFromClaims(claims)
 		for _, requestScope := range scopesSlice {
 			granted = fosite.HierarchicScopeStrategy(scopes, requestScope)
 			if granted {

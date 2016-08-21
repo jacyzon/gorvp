@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"github.com/pilu/xrequestid"
 	"github.com/pborman/uuid"
+	"github.com/ory-am/fosite"
 )
 
 type AdminHandler struct {
@@ -41,14 +42,30 @@ type ScopeResponse struct {
 
 type Routes []Route
 
-func (h *AdminHandler) Auth(w http.ResponseWriter, r *http.Request) {
-
+func (h *AdminHandler) Auth(w http.ResponseWriter, r *http.Request) (error) {
+	claims, _, err := GetTokenClaimsFromBearer(h.Store, r)
+	if err != nil {
+		return err
+	}
+	requestScope := GetScopeArgumentFromClaims(claims)
+	if !fosite.HierarchicScopeStrategy(requestScope, "admin") {
+		return ErrClientPermission
+	}
+	return nil
 }
 
 func (h *AdminHandler) GetClients(w http.ResponseWriter, r *http.Request) {
+	if err := h.Auth(w, r); err != nil {
+		WriteError(w, err)
+		return
+	}
 }
 
 func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
+	if err := h.Auth(w, r); err != nil {
+		WriteError(w, err)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	createClientRequest := CreateClientRequest{}
 	err := decoder.Decode(&createClientRequest)
@@ -136,19 +153,21 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) UpdateClient(w http.ResponseWriter, r *http.Request) {
+	if err := h.Auth(w, r); err != nil {
+		WriteError(w, err)
+		return
+	}
 }
 
 func (h *AdminHandler) DeleteClient(w http.ResponseWriter, r *http.Request) {
+	if err := h.Auth(w, r); err != nil {
+		WriteError(w, err)
+		return
+	}
 }
 
 func (h *AdminHandler) SetupHandler() {
 	h.Routes = Routes{
-		Route{
-			"Get Access of Admin API",
-			"POST",
-			"/auth",
-			h.Auth,
-		},
 		Route{
 			"Get clients",
 			"GET",

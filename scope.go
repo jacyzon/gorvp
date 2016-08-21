@@ -2,7 +2,12 @@ package gorvp
 
 import (
 	"github.com/ory-am/fosite"
+	"strings"
+	"github.com/ory-am/fosite/token/jwt"
 )
+
+var ScopeKeyInJWT = "sco"
+var ScopeSeparator = " "
 
 type Scope struct {
 	Name     string `json:"name" yaml:"name"`
@@ -55,4 +60,11 @@ func (s *Scopes) AddRequiredScope(requiredScope string) {
 	if shouldAddRequiredScope {
 		*s = append(*s, Scope{Name: requiredScope, Required: true})
 	}
+}
+
+func GetScopeArgumentFromClaims(claims *jwt.JWTClaims) (fosite.Arguments) {
+	var scopesSlice []string
+	scopeString := claims.Get(ScopeKeyInJWT).(string)
+	scopesSlice = strings.Split(scopeString, ScopeSeparator)
+	return scopesSlice
 }
