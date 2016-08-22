@@ -2,7 +2,9 @@ package ident
 
 import (
 	"net/http"
-	"github.com/ory-am/fosite/handler/oauth2"
+	"gopkg.in/square/go-jose.v1"
+	"io/ioutil"
+	"encoding/json"
 	"github.com/jacyzon/gorvp"
 )
 
@@ -11,7 +13,7 @@ var UserTable = map[string]string{
 }
 
 type IdentityProvider struct {
-	JWTStrategy *oauth2.RS256JWTStrategy
+	SharedSecret []byte
 }
 
 func (ip *IdentityProvider) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -19,27 +21,31 @@ func (ip *IdentityProvider) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	// get bearer token
-	token, err := gorvp.GetBearerToken(r)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
+	body, _ := ioutil.ReadAll(r.Body)
+	encryption, err := jose.ParseEncrypted(string(body))
+	if checkErr(rw, err) {
+		return
 	}
-
-	// validate JWT
-	_, err = ip.JWTStrategy.Validate(token)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusForbidden)
+	decrypted, err := encryption.Decrypt(ip.SharedSecret)
+	if checkErr(rw, err) {
+		return
 	}
-
-	// check user
-	r.ParseForm()
-	username := r.PostForm.Get("username")
-	password := r.PostForm.Get("password")
-
-	if username != "" && password != "" &&UserTable[username] == password {
+	ir := &gorvp.IdentityRequest{}
+	err = json.Unmarshal(decrypted, ir)
+	if checkErr(rw, err) {
+		return
+	}
+	if ir.Username != "" && ir.Password != "" &&UserTable[ir.Username] == ir.Password {
 		rw.WriteHeader(http.StatusOK)
 		return
 	}
 	rw.WriteHeader(http.StatusNotFound)
+}
+
+func checkErr(rw http.ResponseWriter, err error) (bool) {
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		return true
+	}
+	return false
 }

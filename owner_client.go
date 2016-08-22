@@ -5,23 +5,22 @@ import (
 	"net/http"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/pborman/uuid"
 	"time"
-	"github.com/ory-am/fosite/token/jwt"
-	"github.com/ory-am/fosite/handler/oauth2"
-	"net/url"
 	"bytes"
 	"strconv"
 	goauth2 "golang.org/x/oauth2"
+	"gopkg.in/square/go-jose.v1"
 )
 
 type OwnerClient struct {
-	JWTStrategy        *oauth2.RS256JWTStrategy
 	TokenEndpoint      string
-	Token              string
-	TrustedClient      TrustedClient
+	TrustedClient      *TrustedClient
 	ReNewTokenDuration time.Duration
+}
+
+type IdentityRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -47,20 +46,21 @@ func (oc *OwnerClient) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (oc *OwnerClient) Authenticate(_ context.Context, username string, password string) error {
-
-	oc.reNewTokenIfNeeded()
-	authHeader := fmt.Sprintf("Bearer %s", oc.Token)
-
 	// request
-	form := url.Values{}
-	form.Add("username", username)
-	form.Add("password", password)
+	ir := &IdentityRequest{
+		Username: username,
+		Password: password,
+	}
+	requestJson, _ := json.Marshal(ir)
+
+	encrypter, err := jose.NewEncrypter(jose.DIRECT, jose.A256GCM, []byte(oc.TrustedClient.SharedKey))
+	encryptedRequest, err := encrypter.Encrypt(requestJson)
+	serializedRequest := encryptedRequest.FullSerialize()
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", oc.TrustedClient.IdentityEndpoint, bytes.NewBufferString(form.Encode()))
-	req.Header.Add("Authorization", authHeader)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Content-Length", strconv.Itoa(len(form.Encode())))
+	req, err := http.NewRequest("POST", oc.TrustedClient.IdentityEndpoint, bytes.NewBufferString(serializedRequest))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Length", strconv.Itoa(len([]byte(serializedRequest))))
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -72,38 +72,3 @@ func (oc *OwnerClient) Authenticate(_ context.Context, username string, password
 	return errors.New("User not found or wrong password")
 }
 
-func (oc *OwnerClient) reNewTokenIfNeeded() {
-	if oc.needRenew() {
-		oc.renewToken()
-	}
-}
-
-func (oc *OwnerClient) needRenew() bool {
-	token, err := oc.JWTStrategy.Decode(oc.Token)
-	if err != nil {
-		return true
-	}
-	jwtClaims := jwt.JWTClaimsFromMap(token.Claims)
-	if time.Now().Add(oc.ReNewTokenDuration).Before(jwtClaims.ExpiresAt) {
-		return true
-	}
-	return false
-}
-
-func (oc *OwnerClient) renewToken() {
-	// trusted token
-	JWTSession := &oauth2.JWTSession{
-		JWTClaims: &jwt.JWTClaims{
-			JTI:       uuid.New(),
-			Issuer:    "inner", // TODO router public key
-			Audience:  oc.TrustedClient.ID,
-			Subject:   oc.TrustedClient.Name,
-			ExpiresAt: time.Now().Add(time.Hour * 6),
-			IssuedAt:  time.Now(),
-			NotBefore: time.Now(),
-		},
-		JWTHeader: &jwt.Headers{},
-	}
-	token, _, _ := oc.JWTStrategy.Generate(JWTSession.GetJWTClaims(), JWTSession.GetJWTHeader())
-	oc.Token = token
-}

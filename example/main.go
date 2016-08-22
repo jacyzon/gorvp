@@ -6,8 +6,6 @@ import (
 	"github.com/urfave/cli"
 	"os"
 	"github.com/jacyzon/gorvp/example/ident"
-	"github.com/ory-am/fosite/token/jwt"
-	"github.com/ory-am/fosite/handler/oauth2"
 	"github.com/jacyzon/gorvp"
 	"github.com/gorilla/mux"
 )
@@ -33,21 +31,16 @@ func main() {
 
 	app.Action = func(c *cli.Context) error {
 		config.Load()
-
-		identityProvider := &ident.IdentityProvider{
-			JWTStrategy: &oauth2.RS256JWTStrategy{
-				RS256JWTStrategy: &jwt.RS256JWTStrategy{
-					// TODO only public key is needed
-					PrivateKey: config.RsaKey.Internal.Key,
-				},
-			},
-		}
 		router := mux.NewRouter()
-		router.HandleFunc("/ident", identityProvider.ServeHTTP)
 		goRvp := &gorvp.GoRvp{
 			Router: router,
 			Config: config,
 		}
+
+		identityProvider := &ident.IdentityProvider{
+			SharedSecret: []byte("a1z5iJ0o4MN8UnbLBJwTGH1NxVZYW8EO"),
+		}
+		router.HandleFunc("/ident", identityProvider.ServeHTTP)
 		return goRvp.Run()
 	}
 	app.Run(os.Args)

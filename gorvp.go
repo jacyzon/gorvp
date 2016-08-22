@@ -57,12 +57,6 @@ func (goRvp *GoRvp) Run() (error) {
 		},
 	}
 
-	jwtInternalStrategy := &oauth2.RS256JWTStrategy{
-		RS256JWTStrategy: &jwt.RS256JWTStrategy{
-			PrivateKey: goRvp.Config.RsaKey.Internal.Key,
-		},
-	}
-
 	tokenStrategy := &oauth2.RS256JWTStrategy{
 		RS256JWTStrategy: &jwt.RS256JWTStrategy{
 			PrivateKey: goRvp.Config.RsaKey.Token.Key,
@@ -103,10 +97,9 @@ func (goRvp *GoRvp) Run() (error) {
 	for _, trustedClient := range goRvp.Config.TrustedClients {
 		goRvp.store.CreateTrustedClient(&trustedClient)
 		oc := &OwnerClient{
-			JWTStrategy:        jwtInternalStrategy,
 			TokenEndpoint:      OAuth2TokenEndpoint,
 			ReNewTokenDuration: time.Minute * 30,
-			TrustedClient:      trustedClient,
+			TrustedClient:      &trustedClient,
 		}
 		goRvp.Router.PathPrefix(trustedClient.TokenMountPoint).Handler(negroni.New(
 			// TODO add limit plugin

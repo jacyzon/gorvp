@@ -24,8 +24,7 @@ type DatabaseDocument struct {
 }
 
 type RsaKeyDocument struct {
-	Token    RsaKey `yaml:"token"`
-	Internal RsaKey `yaml:"internal"`
+	Token RsaKey `yaml:"token"`
 }
 
 type RsaKey struct {
@@ -46,6 +45,7 @@ type TrustedClient struct {
 	Name             string `yaml:"name"`
 	Scopes           Scopes `yaml:"scopes"`
 	Secret           string `yaml:"secret"`
+	SharedKey        string `yaml:"shared_key"`
 	IdentityEndpoint string `yaml:"identity_endpoint"`
 	TokenMountPoint  string `yaml:"token_mount_point"`
 	Default_provider bool   `yaml:"default_provider"`
@@ -102,7 +102,6 @@ func (config *Config) SetupRoute(router *mux.Router, m *negroni.Negroni) {
 
 func (c *Config) GenerateRsaKeyIfNotExist() {
 	generateRsaKeyIfNotExist(&c.RsaKey.Token)
-	generateRsaKeyIfNotExist(&c.RsaKey.Internal)
 }
 
 func generateRsaKeyIfNotExist(rsaKey *RsaKey) {

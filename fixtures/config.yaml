@@ -12,15 +12,24 @@ trusted_clients:
     scopes:
       - name: password
         required: true
-    identity_endpoint: http://localhost:3000/ident
     token_mount_point: /authorize
+    # default provider for general user
     default_provider: true
+    identity_endpoint: http://localhost:3000/ident
+    # shared_key is used to exchange identity with identity provider
+    shared_key: a1z5iJ0o4MN8UnbLBJwTGH1NxVZYW8EO
+    # if client secret is not assigned, a new secret will be generated every time the sever startup
+    secret:
   - name: gorvp_admin
     scopes:
       - name: admin
         required: true
-    identity_endpoint: http://localhost:3000/ident
     token_mount_point: /admin/authorize
+    identity_endpoint: http://localhost:3000/ident
+    # shared_key is used to exchange identity with identity provider
+    shared_key: a1z5iJ0o4MN8UnbLBJwTGH1NxVZYW8EO
+    # if client secret is not assigned, a new secret will be generated every time the sever startup
+    secret:
 
 lifespan:
   # 2 months
@@ -34,9 +43,6 @@ rsa_key:
   token:
     public: cert/rs256-public.pem
     private: cert/rs256-private.pem
-  internal:
-    public: cert/rs256-public-internal.pem
-    private: cert/rs256-private-internal.pem
 
 frontend:
   api.example.com:
