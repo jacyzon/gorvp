@@ -54,6 +54,7 @@ type TrustedClient struct {
 type Config struct {
 	ConfigPath            string
 	Port                  string
+	PidFile               string
 	Lifespan              LifespanConf     `yaml:"lifespan"`
 	Frontend              FrontDocument    `yaml:"frontend"`
 	Database              DatabaseDocument `yaml:"database"`

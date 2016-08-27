@@ -14,6 +14,7 @@ func main() {
 	config := &gorvp.Config{}
 
 	app := cli.NewApp()
+	app.Usage = "OAuth2 Proxy"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:        "config,c",
@@ -26,6 +27,11 @@ func main() {
 			Value:       "3000",
 			Usage:       "port number to listen on",
 			Destination: &config.Port,
+		},
+		cli.StringFlag{
+			Name:        "pidfile",
+			Usage:       "pid file for writting process id",
+			Destination: &config.PidFile,
 		},
 	}
 

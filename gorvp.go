@@ -3,6 +3,9 @@ package gorvp
 import (
 	"fmt"
 	"time"
+	"os"
+	"io/ioutil"
+	"strconv"
 	"github.com/jinzhu/gorm"
 	"github.com/ory-am/fosite/compose"
 	"github.com/ory-am/fosite/token/jwt"
@@ -147,8 +150,17 @@ func (goRvp *GoRvp) Run() (error) {
 
 	// attach basic middleware
 	n := negroni.New(negroni.NewRecovery(), negroni.NewLogger(), xrequestid.New(16), negroni.Wrap(goRvp.Router))
+	goRvp.Config.WritePidFile()
 	n.Run(":" + goRvp.Config.Port)
 	return nil
+}
+
+func (c *Config) WritePidFile() {
+	if c.PidFile == "" {
+		return
+	}
+	pid := []byte(strconv.Itoa(os.Getpid()) + "\n")
+	ioutil.WriteFile(c.PidFile, pid, 0644)
 }
 
 func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
