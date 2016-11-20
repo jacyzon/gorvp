@@ -119,7 +119,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 			client.Trusted = createClientRequest.Trusted
 		}
 	case AppTypeClient:
-		// no additional infomation needed for client credential type
+		// no additional information needed for client credential type
 	default:
 		WriteError(w, ErrUnsupportedAppType)
 		return

@@ -60,7 +60,7 @@ func (store *Store) GetAuthorizeCode(signature string) (*AuthorizationCode, erro
 	return code, nil
 }
 
-func (store *Store) GetAuthorizeCodeSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
+func (store *Store) GetAuthorizeCodeSession(_ context.Context, signature string, _ fosite.Session) (fosite.Requester, error) {
 	token, err := store.GetAuthorizeCode(signature)
 	if err != nil {
 		return nil, fosite.ErrNotFound
@@ -110,7 +110,7 @@ func (store *Store) GetToken(signature string) (*Token, error) {
 	return token, nil
 }
 
-func (store *Store) GetTokenSession(_ context.Context, signature string, _ interface{}) (fosite.Requester, error) {
+func (store *Store) GetTokenSession(_ context.Context, signature string, _ fosite.Session) (fosite.Requester, error) {
 	token, err := store.GetToken(signature)
 	if err != nil {
 		return nil, fosite.ErrNotFound
@@ -136,7 +136,7 @@ func (store *Store) CreateAccessTokenSession(ctx context.Context, signature stri
 	return store.CreateTokenSession(ctx, signature, req, false)
 }
 
-func (store *Store) GetAccessTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+func (store *Store) GetAccessTokenSession(ctx context.Context, signature string, s fosite.Session) (fosite.Requester, error) {
 	return store.GetTokenSession(ctx, signature, s)
 }
 
@@ -152,7 +152,7 @@ func (store *Store) CreateRefreshTokenSession(ctx context.Context, signature str
 	return store.CreateTokenSession(ctx, signature, req, true)
 }
 
-func (store *Store) GetRefreshTokenSession(ctx context.Context, signature string, s interface{}) (fosite.Requester, error) {
+func (store *Store) GetRefreshTokenSession(ctx context.Context, signature string, s fosite.Session) (fosite.Requester, error) {
 	return store.GetTokenSession(ctx, signature, s)
 }
 

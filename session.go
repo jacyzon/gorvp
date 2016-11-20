@@ -5,23 +5,17 @@ import (
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite"
 	"strings"
-	"github.com/ory-am/fosite/handler/openid"
 	core "github.com/ory-am/fosite/handler/oauth2"
-	"github.com/ory-am/fosite/compose"
 )
 
 type Session struct {
 	ScopeSeparator string
-	*compose.Lifespan
-	*core.HMACSession
 	*core.JWTSession
-	*openid.DefaultSession
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(lifespan *compose.Lifespan, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
+func NewSession(lifespan LifespanConf, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
 	session := &Session{
-		Lifespan: lifespan,
 		JWTSession: &core.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
 				Issuer:    "https://api.gorvp.dev", // TODO move into config
@@ -31,6 +25,11 @@ func NewSession(lifespan *compose.Lifespan, userID string, scopes fosite.Argumen
 			},
 			JWTHeader: &jwt.Headers{
 				Extra: make(map[string]interface{}),
+			},
+			ExpiresAt: map[fosite.TokenType]time.Time{
+				fosite.AuthorizeCode: time.Now().Add(lifespan.AuthorizeCode * time.Second),
+				fosite.AccessToken: time.Now().Add(lifespan.AccessToken * time.Second),
+				fosite.RefreshToken: time.Now().Add(lifespan.RefreshToken * time.Second),
 			},
 		},
 		ScopeSeparator: " ",

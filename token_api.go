@@ -4,14 +4,14 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 	"github.com/ory-am/fosite/token/jwt"
-	"github.com/ory-am/fosite/hash"
+	"github.com/ory-am/fosite"
 )
 
 type TokenHandler struct {
 	Router *mux.Router
 	Routes Routes
 	Store  *Store
-	Hasher hash.Hasher
+	Hasher fosite.Hasher
 }
 
 func (h *TokenHandler) TokenRevocation(w http.ResponseWriter, r *http.Request) {

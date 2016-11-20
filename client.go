@@ -168,3 +168,9 @@ func (c *GoRvpClient) GetKeyHash() string {
 func (c *GoRvpClient) GetStartActivity() string {
 	return c.StartActivity
 }
+
+func (c *GoRvpClient) IsPublic() bool {
+	// TODO non public client: AppTypeWebBackend, AppTypeOwner, AppTypeClient
+	// remove hard-coded secret
+	return false
+}

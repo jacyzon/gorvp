@@ -5,6 +5,7 @@ import (
 	"time"
 	"net/http"
 	"github.com/ory-am/fosite/token/jwt"
+	jwtgo "github.com/dgrijalva/jwt-go"
 )
 
 type AuthorizationCode struct {
@@ -37,6 +38,19 @@ type ClientRevocation struct {
 	gorm.Model
 	ClientID string
 	Client   GoRvpClient `gorm:"ForeignKey:id;AssociationForeignKey:client_id"`
+}
+
+func JWTClaimsFromMap(m map[string]interface{}) *jwt.JWTClaims {
+	return &jwt.JWTClaims{
+		Subject:   jwt.ToString(m["sub"]),
+		IssuedAt:  jwt.ToTime(m["iat"]),
+		Issuer:    jwt.ToString(m["iss"]),
+		NotBefore: jwt.ToTime(m["nbf"]),
+		Audience:  jwt.ToString(m["aud"]),
+		ExpiresAt: jwt.ToTime(m["exp"]),
+		JTI:       jwt.ToString(m["jti"]),
+		Extra:     jwt.Filter(m, "sub", "iss", "iat", "nbf", "aud", "exp", "jti"),
+	}
 }
 
 func (t *AuthorizationCode) TableName() string {
@@ -89,7 +103,7 @@ func getCodeClaims(store *Store, token string) (*jwt.JWTClaims, *Connection, err
 	}
 
 	// check connection
-	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+	claims := JWTClaimsFromMap(parsedToken.Claims.(jwtgo.MapClaims))
 	connection, err := store.GetConnectionByID(claims.Get("cni").(string))
 	if err != nil {
 		return nil, nil, ErrTokenInvalid
@@ -112,7 +126,7 @@ func getTokenClaims(store *Store, token string) (*jwt.JWTClaims, *Connection, er
 	}
 
 	// check connection
-	claims := jwt.JWTClaimsFromMap(parsedToken.Claims)
+	claims := JWTClaimsFromMap(parsedToken.Claims.(jwtgo.MapClaims))
 	connection, err := store.GetConnectionByID(claims.Get("cni").(string))
 	if err != nil {
 		return nil, nil, ErrTokenInvalid
