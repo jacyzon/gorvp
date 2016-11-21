@@ -99,7 +99,6 @@ func (goRvp *GoRvp) Run() (error) {
 		goRvp.store.CreateTrustedClient(&trustedClient)
 		oc := &OwnerClient{
 			TokenEndpoint:      OAuth2TokenEndpoint,
-			ReNewTokenDuration: time.Minute * 30,
 			TrustedClient:      &trustedClient,
 		}
 		goRvp.Router.PathPrefix(trustedClient.TokenMountPoint).Handler(negroni.New(

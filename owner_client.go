@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"encoding/json"
 	"errors"
-	"time"
 	"bytes"
 	"strconv"
 	goauth2 "golang.org/x/oauth2"
@@ -13,9 +12,8 @@ import (
 )
 
 type OwnerClient struct {
-	TokenEndpoint      string
-	TrustedClient      *TrustedClient
-	ReNewTokenDuration time.Duration
+	TokenEndpoint string
+	TrustedClient *TrustedClient
 }
 
 type IdentityRequest struct {
