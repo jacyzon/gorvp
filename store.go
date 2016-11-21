@@ -38,12 +38,12 @@ func (store *Store) GetClient(id string) (fosite.Client, error) {
 
 func (store *Store) CreateAuthorizeCodeSession(_ context.Context, signature string, req fosite.Requester) error {
 	dataJSON, _ := json.Marshal(req)
-	session := req.GetSession().(*Session)
+	session := req.GetSession()
 	err := store.DB.Create(&AuthorizationCode{
 		Signature: signature,
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
-		UserID: session.JWTClaims.Subject,
+		UserID: session.GetUsername(),
 	}).Error
 	if err != nil {
 		return fosite.ErrServerError
@@ -84,13 +84,13 @@ func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, signature stri
 
 func (store *Store) CreateTokenSession(_ context.Context, signature string, req fosite.Requester, refreshToken bool) (err error) {
 	dataJSON, _ := json.Marshal(req)
-	session := req.GetSession().(*Session)
+	session := req.GetSession()
 
 	token := &Token{
 		Signature: signature,
 		DataJSON: string(dataJSON),
 		ClientID: req.GetClient().GetID(),
-		UserID: session.JWTClaims.Subject,
+		UserID: session.GetUsername(),
 		RefreshToken: refreshToken,
 	}
 	err = store.DB.Create(token).Error

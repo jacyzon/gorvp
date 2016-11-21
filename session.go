@@ -31,6 +31,7 @@ func NewSession(lifespan LifespanConf, userID string, scopes fosite.Arguments, c
 				fosite.AccessToken: time.Now().Add(lifespan.AccessToken * time.Second),
 				fosite.RefreshToken: time.Now().Add(lifespan.RefreshToken * time.Second),
 			},
+			Username: userID,
 		},
 		ScopeSeparator: " ",
 	}
