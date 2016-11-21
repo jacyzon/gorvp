@@ -247,24 +247,19 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Create an empty session object which will be passed to the request handlers
 	session := NewSession(goRvp.Config.Lifespan, "", []string{}, "", &Connection{})
 
-	// TODO refactoring
 	req.ParseForm()
 	grantType := req.PostForm.Get("grant_type")
 	if grantType == "refresh_token" {
 		_, _, ok := req.BasicAuth()
 		if !ok {
-			claims, connection, err := GetTokenClaimsFromRefreshToken(goRvp.store, req)
+			// the client id does not found in basic auth, use client id in jwt instead
+			// this is for implicit refresh flow for public client like android and web app
+			claims, _, err := GetTokenClaimsFromRefreshToken(goRvp.store, req)
 			if err != nil {
 				WriteError(rw, err)
 				return
 			}
-			// bypass client check if the app type of client is android or ios
-			req.SetBasicAuth(claims.Audience, "0c931a6eecc26f13eba386cd92dae809")
-
-			session.CopyScopeFromClaims(claims)
-			session.JWTClaims.Audience = claims.Audience
-			session.JWTClaims.Subject = claims.Subject
-			session.SetConnection(connection)
+			req.SetBasicAuth(claims.Audience, "")
 		}
 	}
 

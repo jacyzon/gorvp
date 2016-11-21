@@ -82,16 +82,16 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO data validation
-	// ==================================================================
-	// | AppType     | GrantTypes         | ResponseTypes | Data Type   |
-	// ------------------------------------------------------------------
-	// | web_backend | authorization_code | code, token   | OAuthData   |
-	// | web_app     | implicit           | token         | OAuthData   |
-	// | android     | implicit           | token         | AndroidData |
-	// | ios         | implicit           | token         |             |
-	// | trusted     | password           | token         |             |
-	// | client      | client_credentials | token         |             |
-	// ==================================================================
+	// ===========================================================================
+	// | AppType     | GrantTypes         | ResponseTypes | Data Type   | Public |
+	// ---------------------------------------------------------------------------
+	// | web_backend | authorization_code | code, token   | OAuthData   | no     |
+	// | web_app     | implicit           | token         | OAuthData   | yes    |
+	// | android     | implicit           | token         | AndroidData | yes    |
+	// | ios         | implicit           | token         |             | yes    |
+	// | trusted     | password           | token         |             | no     |
+	// | client      | client_credentials | token         |             | no     |
+	// ===========================================================================
 	client := GoRvpClient{
 		ID:      uuid.New(),
 		Name:    createClientRequest.Name,
@@ -101,25 +101,27 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	switch createClientRequest.AppType {
 	case AppTypeWebBackend:
 		client.RedirectURI = createClientRequest.RedirectURI
+		client.Public = false
 	case AppTypeWebApp:
 		client.RedirectURI = createClientRequest.RedirectURI
+		client.Public = true
 	case AppTypeAndroid:
 		client.StartActivity = createClientRequest.StartActivity
 		client.PackageName = createClientRequest.PackageName
 		client.KeyHash = createClientRequest.KeyHash
-		// TODO
-		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
+		client.Public = true
 	case AppTypeIos:
 		// not implemented yet
-		// TODO
-		unEncryptedSecret = "0c931a6eecc26f13eba386cd92dae809"
+		WriteError(w, ErrUnsupportedAppType)
+		return
 	case AppTypeOwner:
 		client.RedirectURI = createClientRequest.RedirectURI
+		client.Public = false
 		if createClientRequest.Trusted {
 			client.Trusted = createClientRequest.Trusted
 		}
 	case AppTypeClient:
-		// no additional information needed for client credential type
+		client.Public = false
 	default:
 		WriteError(w, ErrUnsupportedAppType)
 		return
@@ -131,9 +133,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	//client.GrantJSON = string(grantJson)
 
 	// generate client secret
-	if unEncryptedSecret == "" {
-		unEncryptedSecret, _ = h.Hash.Generate(h.Hash.Size)
-	}
+	unEncryptedSecret, _ = h.Hash.Generate(h.Hash.Size)
 	secret, _ := bcrypt.GenerateFromPassword([]byte(unEncryptedSecret), 10)
 	secretString := string(secret)
 	client.Secret = secretString

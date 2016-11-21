@@ -36,6 +36,7 @@ type GoRvpClient struct {
 	Scopes     Scopes `gorm:"-"`
 	ScopesJSON string `gorm:"size:1023"`
 	Trusted    bool
+	Public     bool
 	OAuthData
 	AndroidData
 }
@@ -170,7 +171,5 @@ func (c *GoRvpClient) GetStartActivity() string {
 }
 
 func (c *GoRvpClient) IsPublic() bool {
-	// TODO non public client: AppTypeWebBackend, AppTypeOwner, AppTypeClient
-	// remove hard-coded secret
-	return false
+	return c.Public
 }
