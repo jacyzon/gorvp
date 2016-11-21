@@ -1,0 +1,37 @@
+package: github.com/jacyzon/gorvp
+import:
+- package: github.com/azer/debug
+- package: github.com/dgrijalva/jwt-go
+  version: ~3.0.0
+- package: github.com/go-errors/errors
+- package: github.com/gorilla/mux
+  version: ~1.1.0
+- package: github.com/jinzhu/gorm
+  version: ~1.0.0
+  subpackages:
+  - dialects/mysql
+  - dialects/sqlite
+- package: github.com/ory-am/fosite
+  version: ~0.6.1
+  subpackages:
+  - compose
+  - handler/oauth2
+  - token/jwt
+- package: github.com/pborman/uuid
+  version: ~1.0.0
+- package: github.com/pilu/xrequestid
+- package: github.com/pkg/errors
+  version: ~0.8.0
+- package: github.com/urfave/cli
+  version: ~1.19.0
+- package: github.com/urfave/negroni
+  version: ~0.2.0
+- package: golang.org/x/crypto
+  subpackages:
+  - bcrypt
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: golang.org/x/oauth2
+- package: gopkg.in/square/go-jose.v1
+- package: gopkg.in/yaml.v2
