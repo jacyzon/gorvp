@@ -6,15 +6,16 @@ import (
 	"os"
 	"io/ioutil"
 	"strconv"
+	"net/http"
 	"github.com/jinzhu/gorm"
 	"github.com/ory-am/fosite/compose"
+	customCompsoe "github.com/jacyzon/gorvp/compose"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite/handler/oauth2"
 	"github.com/gorilla/mux"
 	"github.com/urfave/negroni"
 	"github.com/pilu/xrequestid"
 	"github.com/ory-am/fosite"
-	"net/http"
 	"github.com/go-errors/errors"
 )
 
@@ -87,7 +88,7 @@ func (goRvp *GoRvp) Run() (error) {
 		},
 		// enabled handlers
 		compose.OAuth2AuthorizeExplicitFactory,
-		compose.OAuth2AuthorizeImplicitFactory,
+		customCompsoe.OAuth2AuthorizeImplicitRefreshFactory,
 		compose.OAuth2ClientCredentialsGrantFactory,
 		compose.OAuth2RefreshTokenGrantFactory,
 		compose.OAuth2ResourceOwnerPasswordCredentialsFactory,
