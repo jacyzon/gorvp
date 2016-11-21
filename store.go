@@ -110,9 +110,10 @@ func (store *Store) GetToken(signature string) (*Token, error) {
 	return token, nil
 }
 
-func (store *Store) GetTokenSession(_ context.Context, signature string, _ fosite.Session) (fosite.Requester, error) {
+func (store *Store) GetTokenSession(_ context.Context, signature string, _ fosite.Session, isRefresh bool) (fosite.Requester, error) {
 	token, err := store.GetToken(signature)
-	if err != nil {
+	// check token type
+	if (err != nil) || (token.RefreshToken != isRefresh) {
 		return nil, fosite.ErrNotFound
 	}
 	req := &fosite.Request{
@@ -137,7 +138,7 @@ func (store *Store) CreateAccessTokenSession(ctx context.Context, signature stri
 }
 
 func (store *Store) GetAccessTokenSession(ctx context.Context, signature string, s fosite.Session) (fosite.Requester, error) {
-	return store.GetTokenSession(ctx, signature, s)
+	return store.GetTokenSession(ctx, signature, s, false)
 }
 
 func (store *Store) DeleteAccessTokenSession(ctx context.Context, signature string) error {
@@ -153,7 +154,7 @@ func (store *Store) CreateRefreshTokenSession(ctx context.Context, signature str
 }
 
 func (store *Store) GetRefreshTokenSession(ctx context.Context, signature string, s fosite.Session) (fosite.Requester, error) {
-	return store.GetTokenSession(ctx, signature, s)
+	return store.GetTokenSession(ctx, signature, s, true)
 }
 
 func (store *Store) DeleteRefreshTokenSession(ctx context.Context, signature string) error {
