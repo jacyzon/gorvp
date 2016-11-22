@@ -14,11 +14,11 @@ type Session struct {
 }
 
 // newSession is a helper function for creating a new session
-func NewSession(lifespan LifespanConf, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
+func NewSession(config *Config, userID string, scopes fosite.Arguments, clientID string, connection *Connection) *Session {
 	session := &Session{
 		JWTSession: &core.JWTSession{
 			JWTClaims: &jwt.JWTClaims{
-				Issuer:    "https://api.gorvp.dev", // TODO move into config
+				Issuer:    config.Issuer,
 				Subject:   userID,
 				Audience:  clientID,
 				IssuedAt:  time.Now(),
@@ -27,9 +27,9 @@ func NewSession(lifespan LifespanConf, userID string, scopes fosite.Arguments, c
 				Extra: make(map[string]interface{}),
 			},
 			ExpiresAt: map[fosite.TokenType]time.Time{
-				fosite.AuthorizeCode: time.Now().Add(lifespan.AuthorizeCode * time.Second),
-				fosite.AccessToken: time.Now().Add(lifespan.AccessToken * time.Second),
-				fosite.RefreshToken: time.Now().Add(lifespan.RefreshToken * time.Second),
+				fosite.AuthorizeCode: time.Now().Add(config.Lifespan.AuthorizeCode * time.Second),
+				fosite.AccessToken: time.Now().Add(config.Lifespan.AccessToken * time.Second),
+				fosite.RefreshToken: time.Now().Add(config.Lifespan.RefreshToken * time.Second),
 			},
 			Username: userID,
 		},

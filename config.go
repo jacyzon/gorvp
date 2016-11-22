@@ -55,6 +55,7 @@ type Config struct {
 	ConfigPath            string
 	Port                  string
 	PidFile               string
+	Issuer                string           `yaml:"issuer"`
 	Lifespan              LifespanConf     `yaml:"lifespan"`
 	Frontend              FrontDocument    `yaml:"frontend"`
 	Database              DatabaseDocument `yaml:"database"`

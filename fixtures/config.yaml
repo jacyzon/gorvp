@@ -39,6 +39,8 @@ lifespan:
   # 10 minutes
   authorization_code: 600
 
+issuer: https://apinew.gorvp.dev
+
 rsa_key:
   token:
     public: cert/rs256-public.pem

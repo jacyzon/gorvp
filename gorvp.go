@@ -208,7 +208,7 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Now that the user is authorized, we set up a session:
-	session := NewSession(goRvp.Config.Lifespan, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
+	session := NewSession(goRvp.Config, jwtClaims.Subject, grantedScopes, requestClient.GetID(), connection)
 
 	// Now we need to get a response. This is the place where the AuthorizeEndpointHandlers kick in and start processing the request.
 	// NewAuthorizeResponse is capable of running multiple response type handlers which in turn enables this library
@@ -245,7 +245,7 @@ func (goRvp *GoRvp)tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := fosite.NewContext()
 
 	// Create an empty session object which will be passed to the request handlers
-	session := NewSession(goRvp.Config.Lifespan, "", []string{}, "", &Connection{})
+	session := NewSession(goRvp.Config, "", []string{}, "", &Connection{})
 
 	req.ParseForm()
 	grantType := req.PostForm.Get("grant_type")
