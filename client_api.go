@@ -46,7 +46,7 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	clientID := vars["id"]
 
-	client, err := h.Store.GetClient(clientID)
+	client, err := h.Store.GetRvpClient(clientID)
 	if err != nil {
 		WriteError(w, ErrRecordNotFound)
 		return
@@ -55,7 +55,7 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 	var scopeString []string
 	scopeMapRequired := make(map[string]bool)
 
-	scopes := client.(Client).GetFullScopes()
+	scopes := client.GetFullScopes()
 	for _, scope := range *scopes {
 		scopeString = append(scopeString, scope.Name)
 		scopeMapRequired[scope.Name] = scope.Required
@@ -76,7 +76,7 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 
 	getClientResponse := &GetClientResponse{
 		ID: clientID,
-		Name: client.(Client).GetName(),
+		Name: client.GetName(),
 		LogoUrl: "", // TODO default client logo
 		Scopes: scopeResponseList,
 	}

@@ -60,6 +60,13 @@ func (h *AdminHandler) GetClients(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+	clients, err := h.Store.GetRvpClients()
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(clients)
 }
 
 func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +193,7 @@ func (h *AdminHandler) SetupHandler() {
 		Route{
 			"Get clients",
 			"GET",
-			"/client",
+			"/clients",
 			h.GetClients,
 		},
 		Route{

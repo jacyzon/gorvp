@@ -25,15 +25,31 @@ func (store *Store) Migrate() {
 	store.DB.AutoMigrate(&Connection{})
 }
 
-// store
 func (store *Store) GetClient(id string) (fosite.Client, error) {
+	return store.GetRvpClient(id)
+}
+
+func (store *Store) GetRvpClient(id string) (*GoRvpClient, error) {
 	client := &GoRvpClient{ID: id}
 	err := store.DB.Find(client).Error
 	if err != nil {
-		return client, fosite.ErrNotFound
+		return nil, fosite.ErrNotFound
 	}
 	client.UnmarshalScopesJSON()
 	return client, nil
+}
+
+func (store *Store) GetRvpClients() ([]GoRvpClient, error) {
+	clients := []GoRvpClient{}
+	err := store.DB.Find(&clients).Error
+	if err != nil {
+		return nil, fosite.ErrNotFound
+	}
+
+	for i, _ := range clients {
+		clients[i].UnmarshalScopesJSON()
+	}
+	return clients, nil
 }
 
 func (store *Store) CreateAuthorizeCodeSession(_ context.Context, signature string, req fosite.Requester) error {
@@ -304,11 +320,11 @@ func (store *Store) UpdateConnection(clientID string, userID string, scopes []st
 }
 
 func (store *Store) ResetClientPassword(clientID string) (string, error) {
-	client, err := store.GetClient(clientID)
+	client, err := store.GetRvpClient(clientID)
 	if err != nil {
 		return "", err
 	}
-	password, err := client.(Client).ResetPassword()
+	password, err := client.ResetPassword()
 	if err != nil {
 		return "", err
 	}

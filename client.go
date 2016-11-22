@@ -29,17 +29,17 @@ type AndroidData struct {
 }
 
 type GoRvpClient struct {
-	ID         string `gorm:"primary_key"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  *time.Time `sql:"index"`
-	Name       string
-	Secret     string
-	AppType    string
-	Scopes     Scopes `gorm:"-"`
-	ScopesJSON string `gorm:"size:1023"`
-	Trusted    bool
-	Public     bool
+	ID         string     `gorm:"primary_key" json:"id"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
+	DeletedAt  time.Time  `sql:"index" json:"-"`
+	Name       string     `json:"name"`
+	Secret     string     `json:"-"`
+	AppType    string     `json:"app_type"`
+	Scopes     Scopes     `gorm:"-" json:"scopes"`
+	ScopesJSON string     `gorm:"size:1023" json:"-"`
+	Trusted    bool       `json:"trusted"`
+	Public     bool       `json:"public"`
 	OAuthData
 	AndroidData
 }

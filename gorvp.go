@@ -179,13 +179,13 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// check if the token is from trusted client
-	authTokenClient, err := goRvp.store.GetClient(jwtClaims.Audience)
+	authTokenClient, err := goRvp.store.GetRvpClient(jwtClaims.Audience)
 	if err != nil {
 		http.Error(rw, "token is invalid", http.StatusUnauthorized)
 		return
 	}
 	authTokenRVPClient := authTokenClient
-	if !authTokenRVPClient.(Client).IsTrusted() {
+	if !authTokenRVPClient.IsTrusted() {
 		http.Error(rw, "client is not trusted", http.StatusForbidden)
 		return
 	}

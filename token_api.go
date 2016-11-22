@@ -35,7 +35,7 @@ func (h *TokenHandler) TokenRevocation(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		client, err := h.Store.GetClient(clientID)
+		client, err := h.Store.GetRvpClient(clientID)
 		if err != nil {
 			err = ErrRecordNotFound
 			break
