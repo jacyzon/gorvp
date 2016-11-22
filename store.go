@@ -89,6 +89,15 @@ func (store *Store) GetAuthorizeCodeSession(_ context.Context, signature string,
 	return req, nil
 }
 
+func (store *Store) DeleteClient(clientID string) error {
+	client := &GoRvpClient{ID: clientID}
+	err := store.DB.Delete(client).Error
+	if err != nil {
+		return fosite.ErrNotFound
+	}
+	return nil
+}
+
 func (store *Store) DeleteAuthorizeCodeSession(_ context.Context, signature string) error {
 	authorizeCode := &AuthorizationCode{Signature: signature}
 	err := store.DB.Delete(authorizeCode).Error

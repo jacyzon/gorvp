@@ -125,8 +125,14 @@ func getTokenClaims(store *Store, token string) (*jwt.JWTClaims, *Connection, er
 		return nil, nil, ErrTokenInvalid
 	}
 
-	// check connection
+	// check client
 	claims := JWTClaimsFromMap(parsedToken.Claims.(jwtgo.MapClaims))
+	_, err = store.GetClient(claims.Audience)
+	if err != nil {
+		return nil, nil, ErrTokenInvalid
+	}
+
+	// check connection
 	connection, err := store.GetConnectionByID(claims.Get("cni").(string))
 	if err != nil {
 		return nil, nil, ErrTokenInvalid

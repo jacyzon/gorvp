@@ -167,6 +167,14 @@ func (h *AdminHandler) DeleteClient(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+
+	vars := mux.Vars(r)
+	clientID := vars["id"]
+	err := h.Store.DeleteClient(clientID)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
 }
 
 func (h *AdminHandler) ResetClientPassword(w http.ResponseWriter, r *http.Request) {
@@ -211,7 +219,7 @@ func (h *AdminHandler) SetupHandler() {
 		Route{
 			"Delete client",
 			"DELETE",
-			"/client",
+			"/client/{id}",
 			h.DeleteClient,
 		},
 		Route{
