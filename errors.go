@@ -21,6 +21,7 @@ var (
 	ErrInvalidRequest = errors.New("The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed")
 	ErrUnsupportedAppType = errors.New("Unsupported app type")
 	ErrInvalidClient = errors.New("Client authentication failed (e.g., unknown client, no client authentication included, or unsupported authentication method)")
+	ErrModAppTypeNotAllowed = errors.New("Change app type is not allowed, please create new client instead")
 )
 
 type GoRvpError struct {
@@ -114,6 +115,12 @@ func ErrorToHttpResponse(err error) *GoRvpError {
 			Type:        "invalid_client",
 			Description: ErrInvalidClient.Error(),
 			StatusCode:  http.StatusForbidden,
+		}
+	case ErrModAppTypeNotAllowed:
+		return &GoRvpError{
+			Type:        "not_allowed",
+			Description: ErrModAppTypeNotAllowed.Error(),
+			StatusCode:  http.StatusBadRequest,
 		}
 	default:
 		return &GoRvpError{

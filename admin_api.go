@@ -24,10 +24,28 @@ type Route struct {
 type CreateClientRequest struct {
 	Name    string `json:"name"`
 	AppType string `json:"app_type"`
-	Scope   Scopes `json:"scope"`
+	Scopes  Scopes `json:"scope"`
 	Trusted bool   `json:"trusted"`
 	OAuthData
 	AndroidData
+}
+
+type UpdateClientRequest struct {
+	// define allowed column to be updated
+	Name          string     `json:"name,omitempty"`
+	AppType       string     `json:"app_type,omitempty"`
+	Scopes        Scopes     `json:"scopes,omitempty"`
+	ScopesJSON    string     `json:"-"`
+	Trusted       bool       `json:"trusted,omitempty"`
+	Public        bool       `json:"public,omitempty"`
+
+	// OAuthData
+	RedirectURI   string     `json:"redirect_uri,omitempty"`
+
+	// AndroidData
+	StartActivity string     `json:"start_activity,omitempty"`
+	PackageName   string     `json:"package_name,omitempty"`
+	KeyHash       string     `json:"key_hash,omitempty"`
 }
 
 type ScopeResponse struct {
@@ -134,7 +152,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, ErrUnsupportedAppType)
 		return
 	}
-	scopeJson, _ := json.Marshal(createClientRequest.Scope)
+	scopeJson, _ := json.Marshal(createClientRequest.Scopes)
 	client.ScopesJSON = string(scopeJson)
 
 	//grantJson, _ := json.Marshal(&client.Grant)
@@ -160,6 +178,43 @@ func (h *AdminHandler) UpdateClient(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+
+	// input client
+	decoder := json.NewDecoder(r.Body)
+	updateClient := UpdateClientRequest{}
+	err := decoder.Decode(&updateClient)
+	if err != nil {
+		WriteError(w, ErrInvalidRequest)
+		return
+	}
+	if updateClient.Scopes != nil {
+		scopeJsonBytes, _ := json.Marshal(updateClient.Scopes)
+		scopeJson := string(scopeJsonBytes)
+		updateClient.ScopesJSON = string(scopeJson)
+	}
+
+	// find current client
+	vars := mux.Vars(r)
+	clientID := vars["id"]
+	currentClient, err := h.Store.GetRvpClient(clientID)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	// change app type is not allowed
+	if (updateClient.AppType != "") && (currentClient.AppType != updateClient.AppType) {
+		WriteError(w, ErrModAppTypeNotAllowed)
+		return
+	}
+
+	err = h.Store.DB.Model(&currentClient).Updates(updateClient).Error
+	if err != nil {
+		WriteError(w, ErrDatabase)
+		return
+	}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(currentClient)
 }
 
 func (h *AdminHandler) DeleteClient(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +268,7 @@ func (h *AdminHandler) SetupHandler() {
 		Route{
 			"Update client",
 			"PATCH",
-			"/client",
+			"/client/{id}",
 			h.UpdateClient,
 		},
 		Route{
