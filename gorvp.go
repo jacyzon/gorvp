@@ -122,7 +122,6 @@ func (goRvp *GoRvp) Run() (error) {
 	adminHandler := AdminHandler{
 		Router:goRvp.Router.PathPrefix("/admin").Subrouter(),
 		Store: goRvp.store,
-		Hash: xrequestid.New(16),
 	}
 	adminHandler.SetupHandler()
 
@@ -185,8 +184,8 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "token is invalid", http.StatusUnauthorized)
 		return
 	}
-	authTokenRVPClient := authTokenClient.(Client)
-	if !authTokenRVPClient.IsTrusted() {
+	authTokenRVPClient := authTokenClient
+	if !authTokenRVPClient.(Client).IsTrusted() {
 		http.Error(rw, "client is not trusted", http.StatusForbidden)
 		return
 	}

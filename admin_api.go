@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"github.com/gorilla/mux"
 	"encoding/json"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/pilu/xrequestid"
 	"github.com/pborman/uuid"
 	"github.com/ory-am/fosite"
 )
@@ -14,7 +12,6 @@ type AdminHandler struct {
 	Router *mux.Router
 	Routes Routes
 	Store  *Store
-	Hash   *xrequestid.XRequestID
 }
 
 type Route struct {
@@ -38,6 +35,10 @@ type ScopeResponse struct {
 	DisplayName string `json:"display_name"`
 	Description string `json:"description"`
 	Required    bool   `json:"required"`
+}
+
+type ResetPasswordResponse struct {
+	Password string `json:"password"`
 }
 
 type Routes []Route
@@ -97,7 +98,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 		Name:    createClientRequest.Name,
 		AppType: createClientRequest.AppType,
 	}
-	var unEncryptedSecret string
+
 	switch createClientRequest.AppType {
 	case AppTypeWebBackend:
 		client.RedirectURI = createClientRequest.RedirectURI
@@ -133,10 +134,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	//client.GrantJSON = string(grantJson)
 
 	// generate client secret
-	unEncryptedSecret, _ = h.Hash.Generate(h.Hash.Size)
-	secret, _ := bcrypt.GenerateFromPassword([]byte(unEncryptedSecret), 10)
-	secretString := string(secret)
-	client.Secret = secretString
+	unEncryptedSecret, _ := client.ResetPassword()
 
 	// save new client into database
 	h.Store.DB.Create(&client)
@@ -164,6 +162,25 @@ func (h *AdminHandler) DeleteClient(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *AdminHandler) ResetClientPassword(w http.ResponseWriter, r *http.Request) {
+	if err := h.Auth(w, r); err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	vars := mux.Vars(r)
+	clientID := vars["id"]
+	newPassword, err := h.Store.ResetClientPassword(clientID)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+
+	resetPasswordResponse := ResetPasswordResponse{Password: newPassword}
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resetPasswordResponse)
+}
+
 func (h *AdminHandler) SetupHandler() {
 	h.Routes = Routes{
 		Route{
@@ -189,6 +206,12 @@ func (h *AdminHandler) SetupHandler() {
 			"DELETE",
 			"/client",
 			h.DeleteClient,
+		},
+		Route{
+			"Reset client password",
+			"POST",
+			"/client/{id}/reset_password",
+			h.ResetClientPassword,
 		},
 	}
 	for _, route := range h.Routes {

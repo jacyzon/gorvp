@@ -4,6 +4,9 @@ import (
 	"time"
 	"github.com/ory-am/fosite"
 	"encoding/json"
+	"golang.org/x/crypto/bcrypt"
+	"encoding/hex"
+	"crypto/rand"
 )
 
 const AppTypeAndroid = "android"
@@ -50,6 +53,7 @@ type Client interface {
 	GetStartActivity() string
 	IsTrusted() bool
 	GetName() string
+	ResetPassword() (string, error)
 }
 
 // client interface TODO dedicated client file
@@ -172,4 +176,18 @@ func (c *GoRvpClient) GetStartActivity() string {
 
 func (c *GoRvpClient) IsPublic() bool {
 	return c.Public
+}
+
+func (c *GoRvpClient) ResetPassword() (string, error) {
+	passwordLength := 16
+	r := make([]byte, passwordLength)
+	_, err := rand.Read(r)
+	if err != nil {
+		return "", err
+	}
+	unEncryptedSecret := hex.EncodeToString(r)
+	secret, _ := bcrypt.GenerateFromPassword([]byte(unEncryptedSecret), 10)
+	secretString := string(secret)
+	c.Secret = secretString
+	return unEncryptedSecret, nil
 }

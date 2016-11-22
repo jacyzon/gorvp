@@ -30,7 +30,7 @@ func (store *Store) GetClient(id string) (fosite.Client, error) {
 	client := &GoRvpClient{ID: id}
 	err := store.DB.Find(client).Error
 	if err != nil {
-		return nil, fosite.ErrNotFound
+		return client, fosite.ErrNotFound
 	}
 	client.UnmarshalScopesJSON()
 	return client, nil
@@ -301,4 +301,17 @@ func (store *Store) UpdateConnection(clientID string, userID string, scopes []st
 		}
 	}
 	return connection, nil
+}
+
+func (store *Store) ResetClientPassword(clientID string) (string, error) {
+	client, err := store.GetClient(clientID)
+	if err != nil {
+		return "", err
+	}
+	password, err := client.(Client).ResetPassword()
+	if err != nil {
+		return "", err
+	}
+	store.DB.Model(client).Update(client)
+	return password, nil
 }
