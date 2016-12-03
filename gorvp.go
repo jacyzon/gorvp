@@ -181,19 +181,19 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// check if the token is from trusted client
 	authTokenClient, err := goRvp.store.GetRvpClient(jwtClaims.Audience)
 	if err != nil {
-		http.Error(rw, "token is invalid", http.StatusUnauthorized)
+		WriteError(rw, ErrTokenInvalid)
 		return
 	}
 	authTokenRVPClient := authTokenClient
 	if !authTokenRVPClient.IsTrusted() {
-		http.Error(rw, "client is not trusted", http.StatusForbidden)
+		WriteError(rw, ErrInvalidClient)
 		return
 	}
 
 	// check scopes
 	err = GrantScope(goRvp.oauth2, ar)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusForbidden)
+		WriteError(rw, ErrClientPermission)
 		return
 	}
 	requestClient := ar.GetClient().(Client)
@@ -202,7 +202,7 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	connection, err := goRvp.store.UpdateConnection(clientID, jwtClaims.Subject, grantedScopes)
 	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		WriteError(rw, fosite.ErrServerError)
 		return
 	}
 
@@ -224,13 +224,13 @@ func (goRvp *GoRvp) authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	case AppTypeAndroid:
 		if requestClient.GetPackageName() != ar.GetRequestForm().Get("package_name") {
 			validClient = false
-		} else if requestClient.GetKeyHash() != ar.GetRequestForm().Get("key_hash") {
+		} else if requestClient.GetKeyHash() != strings.ToLower(ar.GetRequestForm().Get("key_hash")) {
 			validClient = false
 		}
 		if validClient {
 			response.AddFragment("start_activity", requestClient.GetStartActivity())
 		} else {
-			http.Error(rw, "not valid client", http.StatusForbidden)
+			WriteError(rw, ErrInvalidClient)
 			return
 		}
 	}

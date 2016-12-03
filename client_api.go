@@ -48,7 +48,7 @@ func (h *ClientHandler) GetClient(w http.ResponseWriter, r *http.Request) {
 
 	client, err := h.Store.GetRvpClient(clientID)
 	if err != nil {
-		WriteError(w, ErrRecordNotFound)
+		WriteError(w, ErrClientNotFound)
 		return
 	}
 
