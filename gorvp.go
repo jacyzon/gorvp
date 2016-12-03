@@ -17,6 +17,7 @@ import (
 	"github.com/pilu/xrequestid"
 	"github.com/ory-am/fosite"
 	"github.com/go-errors/errors"
+	"strings"
 )
 
 // TODO move into gorvp struct

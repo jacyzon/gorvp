@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/pborman/uuid"
 	"github.com/ory-am/fosite"
+	"strings"
 )
 
 type AdminHandler struct {
@@ -134,7 +135,7 @@ func (h *AdminHandler) CreateClient(w http.ResponseWriter, r *http.Request) {
 	case AppTypeAndroid:
 		client.StartActivity = createClientRequest.StartActivity
 		client.PackageName = createClientRequest.PackageName
-		client.KeyHash = createClientRequest.KeyHash
+		client.KeyHash = strings.ToLower(createClientRequest.KeyHash)
 		client.Public = true
 	case AppTypeIos:
 		// not implemented yet
@@ -206,6 +207,11 @@ func (h *AdminHandler) UpdateClient(w http.ResponseWriter, r *http.Request) {
 	if (updateClient.AppType != "") && (currentClient.AppType != updateClient.AppType) {
 		WriteError(w, ErrModAppTypeNotAllowed)
 		return
+	}
+
+	// lower the key hash
+	if (updateClient.KeyHash != "") {
+		updateClient.KeyHash = strings.ToLower(updateClient.KeyHash)
 	}
 
 	err = h.Store.DB.Model(&currentClient).Updates(updateClient).Error
