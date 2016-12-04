@@ -69,7 +69,6 @@ func (goRvp *GoRvp) Run() (error) {
 	SetTokenStrategy(tokenStrategy)
 
 	db, err := gorm.Open(goRvp.Config.Database.Type, goRvp.Config.Database.Connection)
-	db.LogMode(true)
 	if err != nil {
 		return errors.New("Cannot open database.")
 	}
