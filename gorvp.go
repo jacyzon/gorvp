@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"github.com/jinzhu/gorm"
 	"github.com/ory-am/fosite/compose"
-	customCompsoe "github.com/jacyzon/gorvp/compose"
+	customCompose "github.com/jacyzon/gorvp/compose"
 	"github.com/ory-am/fosite/token/jwt"
 	"github.com/ory-am/fosite/handler/oauth2"
 	"github.com/gorilla/mux"
@@ -89,7 +89,7 @@ func (goRvp *GoRvp) Run() (error) {
 		},
 		// enabled handlers
 		compose.OAuth2AuthorizeExplicitFactory,
-		customCompsoe.OAuth2AuthorizeImplicitRefreshFactory,
+		customCompose.OAuth2AuthorizeImplicitRefreshFactory,
 		compose.OAuth2ClientCredentialsGrantFactory,
 		compose.OAuth2RefreshTokenGrantFactory,
 		compose.OAuth2ResourceOwnerPasswordCredentialsFactory,
