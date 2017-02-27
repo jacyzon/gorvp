@@ -1,0 +1,1147 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>API Reference</title>
+
+    <style>
+      .highlight table td { padding: 5px; }
+.highlight table pre { margin: 0; }
+.highlight, .highlight .w {
+  color: #f8f8f2;
+  background-color: #272822;
+}
+.highlight .err {
+  color: #151515;
+  background-color: #ac4142;
+}
+.highlight .c, .highlight .cd, .highlight .cm, .highlight .c1, .highlight .cs {
+  color: #505050;
+}
+.highlight .cp {
+  color: #f4bf75;
+}
+.highlight .nt {
+  color: #f4bf75;
+}
+.highlight .o, .highlight .ow {
+  color: #d0d0d0;
+}
+.highlight .p, .highlight .pi {
+  color: #d0d0d0;
+}
+.highlight .gi {
+  color: #90a959;
+}
+.highlight .gd {
+  color: #ac4142;
+}
+.highlight .gh {
+  color: #6a9fb5;
+  background-color: #151515;
+  font-weight: bold;
+}
+.highlight .k, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kv {
+  color: #aa759f;
+}
+.highlight .kc {
+  color: #d28445;
+}
+.highlight .kt {
+  color: #d28445;
+}
+.highlight .kd {
+  color: #d28445;
+}
+.highlight .s, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .s2, .highlight .sh, .highlight .sx, .highlight .s1 {
+  color: #90a959;
+}
+.highlight .sr {
+  color: #75b5aa;
+}
+.highlight .si {
+  color: #8f5536;
+}
+.highlight .se {
+  color: #8f5536;
+}
+.highlight .nn {
+  color: #f4bf75;
+}
+.highlight .nc {
+  color: #f4bf75;
+}
+.highlight .no {
+  color: #f4bf75;
+}
+.highlight .na {
+  color: #6a9fb5;
+}
+.highlight .m, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .il, .highlight .mo, .highlight .mb, .highlight .mx {
+  color: #90a959;
+}
+.highlight .ss {
+  color: #90a959;
+}
+    </style>
+    <link href="stylesheets/screen.css" rel="stylesheet" media="screen" />
+    <link href="stylesheets/print.css" rel="stylesheet" media="print" />
+      <script src="javascripts/all.js"></script>
+  </head>
+
+  <body class="index" data-languages="[&quot;http&quot;,&quot;shell&quot;]">
+    <a href="#" id="nav-button">
+      <span>
+        NAV
+        <img src="images/navbar.png" />
+      </span>
+    </a>
+    <div class="tocify-wrapper">
+      <img src="images/logo.png" />
+        <div class="lang-selector">
+              <a href="#" data-language-name="http">http</a>
+              <a href="#" data-language-name="shell">shell</a>
+        </div>
+        <div class="search">
+          <input type="text" class="search" id="input-search" placeholder="Search">
+        </div>
+        <ul class="search-results"></ul>
+      <div id="toc">
+      </div>
+    </div>
+    <div class="page-wrapper">
+      <div class="dark-box"></div>
+      <div class="content">
+        <h1 id="introduction">Introduction</h1>
+<pre class="highlight shell"><code><span class="c"># ==============================</span>
+<span class="c">#  架構圖</span>
+<span class="c"># ==============================</span>
+<span class="c">#      |</span>
+<span class="c"># |-----------------|</span>
+<span class="c"># |     Nginx       |</span>
+<span class="c"># | SSL Termination |</span>
+<span class="c"># |_________________|</span>
+<span class="c">#      |</span>
+<span class="c">#      |</span>
+<span class="c"># |---------|</span>
+<span class="c"># |   NOP   |     |----------|</span>
+<span class="c"># |         |-----|  MySQL   |</span>
+<span class="c"># |_________|     |__________|</span>
+<span class="c">#      |</span>
+<span class="c">#      ----------------</span>
+<span class="c">#      |              |</span>
+<span class="c"># |---------|     |---------|</span>
+<span class="c"># |  Micro  |     |  Micro  |</span>
+<span class="c"># | Service |     | Service |  ...</span>
+<span class="c"># |_________|     |_________|</span>
+<span class="c"># ==============================</span>
+</code></pre>
+<pre class="highlight http"><code></code></pre>
+
+<p>GoRvp 作為 OAuth2 認證伺服器，以及反向代理伺服器的功能，連線經過 GoRvp，若認證通過才會被導向至後端的 API 伺服器。</p>
+
+<h1 id="identity-provider">Identity provider</h1>
+
+<p>由於 GoRvp 本身不管理帳號資料，在帳號與密碼的驗證需要透過 identity server 提供，
+因此在設定檔有 identity_endpoint 的欄位可以設定 identity server 的 URL。</p>
+
+<p>GoRvp 與 identity server 使用 JWT + JWE 交換使用者資訊。</p>
+
+<h1 id="user-login">User Login</h1>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p>一般使用者</p>
+
+<p><code class="prettyprint">POST http://api.example.com/authorize</code></p>
+
+<p>管理者</p>
+
+<p><code class="prettyprint">POST http://api.example.com/admin/authorize</code></p>
+
+<h3 id="parameters-json">Parameters (JSON)</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>username</td>
+<td>帳號</td>
+</tr>
+<tr>
+<td>password</td>
+<td>密碼</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>access_token</td>
+<td>access token</td>
+</tr>
+<tr>
+<td>expiry</td>
+<td>expiry date</td>
+</tr>
+<tr>
+<td>token_type</td>
+<td>token type</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v --form POST https://api.example.com/auth <span class="se">\</span>
+<span class="nv">password</span><span class="o">=</span><span class="s2">"foobar"</span> <span class="se">\</span>
+<span class="nv">username</span><span class="o">=</span><span class="s2">"peter
+</span></code></pre>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/auth</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/x-www-form-urlencoded; charset=utf-8</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+
+password=foobar&amp;username=peter
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"access_token"</span><span class="p">:</span><span class="w"> </span><span class="s2">"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI3ZDZhYTcxMy03ZDc3LTQzN2EtYTA5Ny0zNTUyZDVlZWIwMzEiLCJjbmkiOiJkOTJjNWM1OS02ZjZhLTQyNWQtODY3Ny1mMDUzNjk0YzUwMGIiLCJleHAiOjE0NzY2Mzc3NDksImlhdCI6MTQ3MTQ1Mzc0OSwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiZmZjY2QyNzktYTg4Zi00ODdhLTk4ZjQtZWI1NTg2ZDMxMGQwIiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.YojIVY_P8yijcVQjpw1J50JnujFkupFB1tXx19IUhaUtPt5-yH2idGFfE27RDJMAFRHcvm0ydqfIS1ueLqE9_ieroR8IGpi9SHqxjGPI4Zo0vUx_jFFTPhdYQuCWIfNxNcBrZNqpTmkYWj4SW8EsB1qhiORAryKGKlGvEUsS-aq6VjxSRVFDUhUwNU4ZXi2C"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"expiry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-10-17T01:09:09.9836053+08:00"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"token_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bearer"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h1 id="admin-api">Admin API</h1>
+
+<aside class="notice">
+需要 admin 權限， 透過 admin user login 取得 token
+</aside>
+
+<table><thead>
+<tr>
+<th>App type</th>
+<th>OAuth flow</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>android</td>
+<td>Implicit flow</td>
+</tr>
+<tr>
+<td>web_app (frontend)</td>
+<td>Implicit flow</td>
+</tr>
+<tr>
+<td>web_baclend (backend)</td>
+<td>Explicit flow</td>
+</tr>
+</tbody></table>
+
+<h2 id="create-an-android-client">Create an Android Client</h2>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST https://api.example.com/admin/client</code></p>
+
+<h3 id="parameters-json">Parameters (JSON)</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>app_type</td>
+<td>固定為 android</td>
+</tr>
+<tr>
+<td>key_hash</td>
+<td>簽署此 app 的 sha1 hash</td>
+</tr>
+<tr>
+<td>name</td>
+<td>名稱</td>
+</tr>
+<tr>
+<td>package_name</td>
+<td>package name</td>
+</tr>
+<tr>
+<td>scope</td>
+<td>授予的權限</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<p>回傳的 secret 可以忽略，在 Android 目前沒有用到。</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+<tr>
+<td>secret</td>
+<td>client secret</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v POST https://api.example.com/admin/client <span class="se">\</span>
+<span class="nv">app_type</span><span class="o">=</span>android <span class="se">\</span>
+<span class="nv">key_hash</span><span class="o">=</span>4b9312cb6558ea60d8d97cdc735746c85172dc3c <span class="se">\</span>
+<span class="nv">name</span><span class="o">=</span>example <span class="se">\</span>
+<span class="nv">package_name</span><span class="o">=</span>com.example.third_party_app <span class="se">\</span>
+scope:<span class="o">=</span><span class="s1">'[ { "name": "grade", "required": true }, { "name": "class_schedule", "required": true }, { "name": "event", "required": true }, { "name": "offline", "required": true } ]'</span> <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">POST</span> <span class="nn">/admin/client</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+
+<span class="p">{</span><span class="w">
+    </span><span class="nt">"app_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"android"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"key_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4b9312cb6558ea60d8d97cdc735746c85172dc3c"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"third-party"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"package_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"com.example.third_party_app"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"067748c1-9cc4-47d5-b337-0f452f3801f3"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0c931a6eecc26f13eba386cd92dae809"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span></code></pre>
+
+<h2 id="create-a-non-confidential-client">Create a non-confidential client</h2>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST https://api.example.com/admin/client</code></p>
+
+<h3 id="parameters-json">Parameters (JSON)</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>app_type</td>
+<td>固定為 web_app</td>
+</tr>
+<tr>
+<td>redirect_uri</td>
+<td>重導向的 URI</td>
+</tr>
+<tr>
+<td>name</td>
+<td>名稱</td>
+</tr>
+<tr>
+<td>scope</td>
+<td>授予的權限</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<p>回傳的 secret 可以忽略，在 Android 目前沒有用到。</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+<tr>
+<td>secret</td>
+<td>client secret</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v POST https://api.example.com/admin/client <span class="se">\</span>
+<span class="nv">app_type</span><span class="o">=</span>web_app <span class="se">\</span>
+<span class="nv">redirect_uri</span><span class="o">=</span><span class="s2">"http://www.example.com/callback"</span> <span class="se">\</span>
+<span class="nv">name</span><span class="o">=</span>example <span class="se">\</span>
+scope:<span class="o">=</span><span class="s1">'[ { "name": "grade", "required": true }, { "name": "class_schedule", "required": true }, { "name": "event", "required": true }, { "name": "offline", "required": true } ]'</span> <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="err">
+</span><span class="nf">POST</span> <span class="nn">/admin/client</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+
+<span class="p">{</span><span class="w">
+    </span><span class="nt">"app_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web_app"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"redirect_URI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://www.example.com/callback"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ff3c35b8-a207-4a78-8e8e-2162dbadfc47"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"db3d216b2a2cb599249f5d3403d4d87c"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h2 id="create-a-confidential-client">Create a confidential client</h2>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST https://api.example.com/admin/client</code></p>
+
+<h3 id="parameters">Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>app_type</td>
+<td>固定為 web_backend</td>
+</tr>
+<tr>
+<td>redirect_URI</td>
+<td>重導向的 URI</td>
+</tr>
+<tr>
+<td>name</td>
+<td>名稱</td>
+</tr>
+<tr>
+<td>scope</td>
+<td>授予的權限</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<p>回傳的 secret 可以忽略，在 Android 目前沒有用到。</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+<tr>
+<td>secret</td>
+<td>client secret</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v POST https://api.example.com/admin/client <span class="se">\</span>
+<span class="nv">app_type</span><span class="o">=</span>web_backend <span class="se">\</span>
+<span class="nv">redirect_URI</span><span class="o">=</span><span class="s2">"http://www.example.com/callback"</span> <span class="se">\</span>
+<span class="nv">name</span><span class="o">=</span>example <span class="se">\</span>
+scope:<span class="o">=</span><span class="s1">'[ { "name": "grade", "required": true }, { "name": "class_schedule", "required": true }, { "name": "event", "required": true }, { "name": "offline", "required": true } ]'</span> <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="err">
+</span><span class="nf">POST</span> <span class="nn">/admin/client</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+
+<span class="p">{</span><span class="w">
+    </span><span class="nt">"app_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web_backend"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"redirect_URI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://www.example.com/callback"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4231b40a-c40e-4e66-8fdf-eb351eeeb081"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2f5b59cba286ddb9abeb439cb59757cd"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h2 id="list-clients">List clients</h2>
+
+<p>列出所有第三方應用程式</p>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">GET https://api.example.com/clients</code></p>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v GET https://api.example.com/admin/clients <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/connections/applications</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tecccccst"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"app_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web_app"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"scopes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"trusted"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"public"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"redirect_uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://localhost/callback"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"start_activity"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"package_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"key_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h2 id="update-client">Update client</h2>
+
+<p>修改第三方應用程式，可以部份更改 (partial)，但不允許變更 app type</p>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">PATCH https://api.example.com/admin/client/:id</code></p>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v PATCH
+<span class="nv">redirect_uri</span><span class="o">=</span><span class="s2">"http://www.example.com/callback"</span> <span class="se">\</span>
+<span class="nv">name</span><span class="o">=</span>example <span class="se">\</span>
+scope:<span class="o">=</span><span class="s1">'[ { "name": "grade", "required": true }, { "name": "offline", "required": true } ]'</span> <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="err">
+</span><span class="nf">PATCH</span> <span class="nn">/admin/client/fa53c1ae-632f-4631-a2c7-3f37907c0951</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+
+<span class="p">{</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"redirect_URI"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://www.example.com/callback"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scope"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fa53c1ae-632f-4631-a2c7-3f37907c0951"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-11-21T17:23:15.063200935+08:00"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"updated_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-11-23T00:17:48.087843308+08:00"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"app_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web_app"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"scopes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+      </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nt">"trusted"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"public"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"redirect_uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://www.example.com/callback"</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"start_activity"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"package_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nt">"key_hash"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h2 id="delete-client">Delete client</h2>
+
+<p>刪除第三方應用程式</p>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">DELETE https://api.example.com/admin/client/:id</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client ID</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v DELETE https://api.example.com/admin/client/a3838257-6d8b-400e-beab-45d3420c38ea <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/admin/client/a3838257-6d8b-400e-beab-45d3420c38ea</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI1MzJjNDRjZS1hMDQwLTQ5YmMtYWJmOS02MjcxYzY5YmNkYmMiLCJjbmkiOiI2NDc1MjA1Yy04MTYxLTRmNDItYTIzMC0zMjQxYmFiOTY4OGEiLCJleHAiOjEuNDg1MDcxMDg0ZSswOSwiaWF0IjoxLjQ3OTg4NzA4NGUrMDksImlzcyI6Imh0dHBzOi8vYXBpLmdvcnZwLmRldiIsImp0aSI6ImViYjUyYTUzLTliYzQtNDg5Ni05ZTRmLTU3MTlhNjA5ZjlmZSIsIm5iZiI6LTYuMjEzNTU5NjhlKzEwLCJzY28iOiJhZG1pbiIsInN1YiI6InBldGVyIn0.wNFbF95ruZHKTZIw7RjFgTMyjMtyXTX7oKU_hl2OdrVmvyew5KgIfofzNlxQBKPph0b9i7IEDVtYDkQHBi_Ny9UrodMpL0WQ0Y-Nj9r7TQm_zl8UGwXFeHSubf2dYNthAgLMPnEEoy_byv5DLfw73I-lCf8aVjkkWnYyHGHGUfeFKvSsgEKOJRqHQl67ti5u</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">text/plain; charset=utf-8</span>
+</code></pre>
+
+<h1 id="third-party-client">Third party client</h1>
+
+<h2 id="client-detail">Client detail</h2>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">GET https://api.example.com/client/:id</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<p>回傳的 secret 可以忽略，在 Android 目前沒有用到。</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+<tr>
+<td>logo_url</td>
+<td>client 的 LOGO URL</td>
+</tr>
+<tr>
+<td>name</td>
+<td>client 名稱</td>
+</tr>
+<tr>
+<td>scopes</td>
+<td>client 允許要求的權限</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v GET http://api.example.com/client/ff3c35b8-a207-4a78-8e8e-2162dbadfc47
+</code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/client/ff3c35b8-a207-4a78-8e8e-2162dbadfc47</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ff3c35b8-a207-4a78-8e8e-2162dbadfc47"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"logo_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"scopes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"display_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"class_schedule"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"display_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"display_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"grade"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"display_name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"offline"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+        </span><span class="p">}</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+<h2 id="grant">Grant</h2>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST https://api.example.com/oauth/authorize</code></p>
+
+<h3 id="parameters-form-urlencoded">Parameters (form-urlencoded)</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>client_id</td>
+<td>帳號</td>
+</tr>
+<tr>
+<td>response_type</td>
+<td>這裡使用 implicit flow， 固定為 token</td>
+</tr>
+<tr>
+<td>scope</td>
+<td>要授予第三方的權限，用空格分開</td>
+</tr>
+<tr>
+<td>package_name</td>
+<td>Android APP 的 package name</td>
+</tr>
+<tr>
+<td>key_hash</td>
+<td>簽署 APP 用的 sha1 hash</td>
+</tr>
+<tr>
+<td>state</td>
+<td>隨機產生的狀態，回傳時要比對一不一樣</td>
+</tr>
+</tbody></table>
+
+<h3 id="response-parameters">Response Parameters</h3>
+
+<p>回傳的 secret 可以忽略，在 Android 目前沒有用到。</p>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>client id</td>
+</tr>
+<tr>
+<td>access_token</td>
+<td>access token</td>
+</tr>
+<tr>
+<td>refresh_token</td>
+<td>若有 offline 權限會回傳此欄位作為更新 access_token 用</td>
+</tr>
+<tr>
+<td>scope</td>
+<td>獲得的權限</td>
+</tr>
+<tr>
+<td>state</td>
+<td>在 query 帶入的 state</td>
+</tr>
+<tr>
+<td>token_type</td>
+<td>固定為 bearer</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v --form POST https://api.example.com/oauth <span class="se">\</span>
+<span class="nv">client_id</span><span class="o">==</span><span class="s2">"6b1bdd86-563d-450e-b1ca-fdd7f4c29879"</span> <span class="se">\</span>
+<span class="nv">response_type</span><span class="o">==</span><span class="s2">"token"</span> <span class="se">\</span>
+<span class="nv">scope</span><span class="o">==</span><span class="s2">"gorvp foo offline"</span> <span class="se">\</span>
+<span class="nv">package_name</span><span class="o">==</span><span class="s2">"io.github.gorvp.third_party_app"</span> <span class="se">\</span>
+<span class="nv">key_hash</span><span class="o">==</span><span class="s2">"4b9312cb6558ea60d8d97cdc735746c85172dc3c"</span> <span class="se">\</span>
+<span class="nv">state</span><span class="o">==</span>some-random-state-foobar <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJiNGZlY2YwYS02OGI2LTRlN2ItODQyOC05YTNjOTI3Y2JhZTEiLCJjbmkiOiI0ZGU5OWM2NC03OTM3LTRlN2QtYTMzNC0wZWM4MTdlZDEwOWIiLCJleHAiOjE0NzEyMDMyOTcsImlhdCI6MTQ3MTE5OTY5NywiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiMTY2OWU4YjQtZWJhYi00MmI3LWEyNTctM2NjNTg5NTM4OThkIiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.tDM385RkwYrJNF7D27YbHKufwxYMLC9GjIKMr3JkwBCeuzK_1jIE-Dmex-M3MX9T0lsBHwbWo06BwRa3mT0htJUK-8jO7bGVfzUX1XzVf_Wr7xDrIAaFsZOwaDowoKNUYbES8cB5Dx2yUJ1tajH8RcT-IZUTsmITdFH99rFmLp-4mFwU4qv8h_LJ12MM-E5B"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/oauth?client_id=93d74867-9e37-47c3-964a-cc23b5497711&amp;response_type=token&amp;scope=grade+class_schedule+event+offline&amp;package_name=com.example.third_party_app&amp;key_hash=4b9312cb6558ea60d8d97cdc735746c85172dc3c&amp;state=some-random-state</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI3ZDZhYTcxMy03ZDc3LTQzN2EtYTA5Ny0zNTUyZDVlZWIwMzEiLCJjbmkiOiJkOTJjNWM1OS02ZjZhLTQyNWQtODY3Ny1mMDUzNjk0YzUwMGIiLCJleHAiOjE0NzY2MzcxMDMsImlhdCI6MTQ3MTQ1MzEwMywiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNjQwMmNkNDMtMGIyZC00Y2U5LWFkZDEtOGUyZmZlODY4ODY1IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.nkmdqiR4zpyNPZMAlQ6p2ESZVjRbQMZIKeTyIdx_jzDITwhwopjyXgwV72QSuG_UuKTN3mv1MVJFQZ8TJy7KXZgQ0qi_lUmXqoiShTUdz-6dvQyWs_yRddZQ3ZBe7eBD8DtZq0w48SNZJrXLrAtvD-sHA65uDs42C9gyNXKpPkxHAEMrTJBDthE48OzSEbTZ</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">302</span> <span class="ne">Found</span>
+<span class="na">Location</span><span class="p">:</span> <span class="s">http://localhost#access_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI5M2Q3NDg2Ny05ZTM3LTQ3YzMtOTY0YS1jYzIzYjU0OTc3MTEiLCJjbmkiOiIxZmYxNGQ5My00OGU3LTQyMGQtOTI1Yy0xMjhmNWE4ODM0MjQiLCJleHAiOjE0NzY2NDA1NDYsImlhdCI6MTQ3MTQ1NjU0NiwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiOTIzNTI0NTItZTcxMy00OWQyLTgzYmMtNzdkYjI4YWJlNTI2IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6ImdyYWRlIGNsYXNzX3NjaGVkdWxlIGV2ZW50IG9mZmxpbmUiLCJzdWIiOiJwZXRlciJ9.YpoWC01cXbZg5jxOS_KIAP8LJoVlLQXb-Op07yrvdfEMxH9XjxhGEL58H4h3a2_1VizpdReogtG1Z9lyIv5QirqtAEKq8qtmQ33xaskKpSXfVNxmudEw_hJkQgeTL0s8vbzP5_W3XlyKS1hzkpGrO87ZkdJjjG1x_Xg7xuNplm6LlEN9uHyzKbUUfaocMW72&amp;expires_in=5184000&amp;refresh_token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI5M2Q3NDg2Ny05ZTM3LTQ3YzMtOTY0YS1jYzIzYjU0OTc3MTEiLCJjbmkiOiIxZmYxNGQ5My00OGU3LTQyMGQtOTI1Yy0xMjhmNWE4ODM0MjQiLCJleHAiOjE0ODcwMDg1NDYsImlhdCI6MTQ3MTQ1NjU0NiwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiMmZmNTVjMjctNTRhMC00OWYwLTk3NGQtZTc2ZjE0ZjNjNzc2IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6ImdyYWRlIGNsYXNzX3NjaGVkdWxlIGV2ZW50IG9mZmxpbmUiLCJzdWIiOiJwZXRlciJ9.O3afmEipZA5WZyBb3hn-Osn4h6QJrjZk5njjUjOKXiEdRGtlFwe9QyQrOJNbHC2qkteP9fRN7PaiyZX_j9fSjDphicMO8HaoKwGWplLyi2Eg2SQ_nbStBLYWjOeeMU-GVgAvqXMhh70OcUh63v4NjYk2J3KQbSqJSK_C42_GAYTFDd_jelK9SeDmsBNFYXbR&amp;scope=grade%252Bclass_schedule%252Bevent%252Boffline&amp;start_activity=&amp;state=some-random-state&amp;token_type=bearer</span>
+</code></pre>
+
+<h1 id="token-management">Token Management</h1>
+
+<h2 id="token-revocation">Token Revocation</h2>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">POST https://api.example.com/token/:signature</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>signature</td>
+<td>JWT 的 signature</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v DELETE https://api.example.com/token/EsDyr7drNnUsaV4TA7I3BvMpuR0WLypOsESCYN1WgfIQQNxq1ij4P1BBYRWgdjJBidY5WPtMmg9FZanmYN66swEkVtl3od-7OXnUtSElyCqDdizm78k_vdraLnlqnd2rEJoZYvWSNLQxHmCkYyS9Ldvy7hAr7LHaJLIomq8Cz1F3nXE7QmFM4aPcEzBZJI7c <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/token/EsDyr7drNnUsaV4TA7I3BvMpuR0WLypOsESCYN1WgfIQQNxq1ij4P1BBYRWgdjJBidY5WPtMmg9FZanmYN66swEkVtl3od-7OXnUtSElyCqDdizm78k_vdraLnlqnd2rEJoZYvWSNLQxHmCkYyS9Ldvy7hAr7LHaJLIomq8Cz1F3nXE7QmFM4aPcEzBZJI7c</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">text/plain; charset=utf-8</span>
+</code></pre>
+
+<h2 id="list-applications">List applications</h2>
+
+<p>列出所有授予權限的第三方應用程式</p>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">GET https://api.example.com/connections/applications</code></p>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v GET https://api.example.com/connections/applications <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/connections/applications</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+        </span><span class="nt">"client"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"8a7a0d15-bf6b-4c1a-88ca-28e34f2ef224"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"logo_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example_api"</span><span class="p">,</span><span class="w">
+            </span><span class="nt">"scopes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a3838257-6d8b-400e-beab-45d3420c38ea"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre>
+
+<h2 id="revoke-application">Revoke application</h2>
+
+<p>撤銷應用程式的存取</p>
+
+<aside class="notice">
+使用 Bearer Token 驗證
+</aside>
+
+<h3 id="http-request">HTTP Request</h3>
+
+<p><code class="prettyprint">DELETE https://api.example.com/connections/:id</code></p>
+
+<h3 id="query-parameters">Query Parameters</h3>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>id</td>
+<td>connection ID</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v DELETE https://api.example.com/connections/a3838257-6d8b-400e-beab-45d3420c38ea <span class="se">\</span>
+Authorization:<span class="s2">"Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7"</span>
+</code></pre>
+<pre class="highlight http"><code><span class="nf">DELETE</span> <span class="nn">/connections/a3838257-6d8b-400e-beab-45d3420c38ea</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Authorization</span><span class="p">:</span> <span class="s">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI4YTdhMGQxNS1iZjZiLTRjMWEtODhjYS0yOGUzNGYyZWYyMjQiLCJjbmkiOiJhMzgzODI1Ny02ZDhiLTQwMGUtYmVhYi00NWQzNDIwYzM4ZWEiLCJleHAiOjE0NzY3MDg4MDAsImlhdCI6MTQ3MTUyNDgwMCwiaXNzIjoiaHR0cHM6Ly9hcGkuZ29ydnAuZGV2IiwianRpIjoiNDhjMmQxMjAtZTJkZS00MzQ2LWFhMWMtM2VkMzYzMzIyMTM5IiwibmJmIjotNjIxMzU1OTY4MDAsInNjbyI6InBhc3N3b3JkIiwic3ViIjoicGV0ZXIifQ.e7L-rI8b3Zja-eZQdb8IubcHQUKniadloozX-km4bgSm9WrPAyjMkAJ6frQ1JXw1ACmHAEgrCm4zzyN_I3o7mNYE6iUZ8alWOU6Z7a6NUPIyWj6-hCjSgq0axNx-gqmJ-GAxztOEGNLDe1eQNgAwyEDBc2CHL6OJ4oWoi3JYu7B1XiQnRpZ7hXV0d_HkMru7</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">text/plain; charset=utf-8</span>
+</code></pre>
+
+          <h1 id="errors">Errors</h1>
+
+<h2 id="response-parameters">Response Parameters</h2>
+
+<table><thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead><tbody>
+<tr>
+<td>error_description</td>
+<td>error description</td>
+</tr>
+<tr>
+<td>error_type</td>
+<td>error type</td>
+</tr>
+<tr>
+<td>status_code</td>
+<td>http status code</td>
+</tr>
+</tbody></table>
+
+<blockquote>
+<p>Example request</p>
+</blockquote>
+<pre class="highlight shell"><code>http -v GET http://api.example.com/client/client-not-exist
+</code></pre>
+<pre class="highlight http"><code><span class="nf">GET</span> <span class="nn">/client/client-not-exist</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">api.example.com</span>
+</code></pre>
+
+<blockquote>
+<p>Example response</p>
+</blockquote>
+<pre class="highlight http"><code><span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">404</span> <span class="ne">Not Found</span>
+<span class="na">Content-Type</span><span class="p">:</span> <span class="s">application/json</span>
+</code></pre>
+<pre class="highlight json"><code><span class="p">{</span><span class="w">
+    </span><span class="nt">"error_description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Record not found"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"error_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"not_found"</span><span class="p">,</span><span class="w">
+    </span><span class="nt">"status_code"</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre>
+
+      </div>
+      <div class="dark-box">
+          <div class="lang-selector">
+                <a href="#" data-language-name="http">http</a>
+                <a href="#" data-language-name="shell">shell</a>
+          </div>
+      </div>
+    </div>
+  </body>
+</html>
